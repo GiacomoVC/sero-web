@@ -294,23 +294,6 @@ export async function GET(
 
           <div
             style={{
-              background: CREAM,
-              color: PLUM,
-              borderRadius: 999,
-              padding: '32px 64px',
-              fontSize: 46,
-              fontWeight: 800,
-              display: 'flex',
-              letterSpacing: '-0.5px',
-              marginTop: 8,
-              boxShadow: '0 10px 0 ' + CORAL,
-            }}
-          >
-            {shareUrl}
-          </div>
-
-          <div
-            style={{
               fontSize: 24,
               color: CREAM,
               opacity: 0.55,

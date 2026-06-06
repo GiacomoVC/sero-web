@@ -1,6 +1,6 @@
 // Use stable, well-supported emojis only.
 // Avoid variation selectors (U+FE0F) and Unicode 14+ glyphs to prevent
-// mojibake (Hola � ...) on older devices and odd URL roundtrips.
+// mojibake (Hola ï¿½ ...) on older devices and odd URL roundtrips.
 
 const HAND = '\u{1F44B}'; // 👋
 const NERD = '\u{1F913}'; // 🤓
@@ -9,9 +9,22 @@ const POINT_DOWN = '\u{1F447}'; // 👇
 
 export function buildWhatsAppMessage(opts: {
   url: string;
-  loveExample?: string;
+  /** Ordered tags from extractTags — specific items first, then category chips. */
+  tags?: string[];
 }): string {
-  const love = (opts.loveExample || 'algo que me apasiona').trim();
+  const tags = (opts.tags ?? []).filter(Boolean).slice(0, 3);
+
+  let love: string;
+  if (tags.length === 0) {
+    love = 'algo que me apasiona';
+  } else if (tags.length === 1) {
+    love = tags[0];
+  } else if (tags.length === 2) {
+    love = `${tags[0]} y ${tags[1]}`;
+  } else {
+    love = `${tags[0]}, ${tags[1]} y ${tags[2]}`;
+  }
+
   return [
     `Hola ${HAND}`,
     '',

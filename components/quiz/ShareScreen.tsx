@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Logo } from '../ui/Logo';
 import { buildWhatsAppMessage, whatsappShareUrl } from '@/lib/whatsapp';
 import type { SubmitResult } from '@/lib/types';
@@ -42,9 +42,9 @@ export function ShareScreen({
   firstName: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const [storyStatus, setStoryStatus] = useState<'idle' | 'opening'>('idle');
+  const blobRef = useRef<File | null>(null);
 
-  // Use the current window origin to build URLs — avoids the server returning
-  // localhost:3000 when accessed from a LAN IP during development.
   const shareUrl =
     typeof window !== 'undefined'
       ? `${window.location.origin}/${result.slug}`
@@ -55,13 +55,22 @@ export function ShareScreen({
       ? result.igUrl.replace(/^https?:\/\/[^/]+/, window.location.origin)
       : result.igUrl;
 
-  // Build the WhatsApp message client-side so the link points to the correct origin.
+  // Preload story image on mount so the button is instant
+  useEffect(() => {
+    fetch(storyUrl)
+      .then((r) => r.blob())
+      .then((blob) => {
+        blobRef.current = new File(
+          [blob],
+          `sero-story-${result.slug}.png`,
+          { type: 'image/png' }
+        );
+      })
+      .catch(() => {});
+  }, [storyUrl, result.slug]);
+
   const waMessage = useMemo(
-    () =>
-      buildWhatsAppMessage({
-        url: shareUrl,
-        loveExample: result.tags[0],
-      }),
+    () => buildWhatsAppMessage({ url: shareUrl, tags: result.tags }),
     [shareUrl, result.tags]
   );
 
@@ -76,34 +85,52 @@ export function ShareScreen({
   };
 
   const shareStory = async () => {
-    try {
-      const res = await fetch(storyUrl);
-      const blob = await res.blob();
-      const file = new File([blob], `sero-story-${result.slug}.png`, { type: 'image/png' });
+    // Copy URL to clipboard in parallel so user can paste it as sticker in their story
+    navigator.clipboard.writeText(shareUrl).catch(() => {});
 
-      // Try native share with file (iOS 15+, Android Chrome)
-      if (
-        typeof navigator.share === 'function' &&
-        typeof navigator.canShare === 'function' &&
-        navigator.canShare({ files: [file] })
-      ) {
-        await navigator.share({ files: [file], title: 'Mi perfil Sero' });
-        return;
+    // Ensure we have the blob (should already be preloaded)
+    let file = blobRef.current;
+    if (!file) {
+      try {
+        const res = await fetch(storyUrl);
+        const blob = await res.blob();
+        file = new File([blob], `sero-story-${result.slug}.png`, { type: 'image/png' });
+        blobRef.current = file;
+      } catch {
+        // noop
       }
-
-      // Fallback: download the image (desktop) or open in new tab (iOS)
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sero-story-${result.slug}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      // Last resort: open image directly in new tab so user can save it
-      window.open(storyUrl, '_blank');
     }
+
+    setStoryStatus('opening');
+    setTimeout(() => setStoryStatus('idle'), 3500);
+
+    // Try to open Instagram Stories camera directly (skips the share sheet)
+    window.location.href = 'instagram://story-camera';
+
+    // Fallback after 1.5s: if page is still visible, Instagram isn't installed
+    setTimeout(() => {
+      if (document.visibilityState !== 'hidden') {
+        if (
+          file &&
+          typeof navigator.share === 'function' &&
+          typeof navigator.canShare === 'function' &&
+          navigator.canShare({ files: [file] })
+        ) {
+          navigator.share({ files: [file], title: 'Mi perfil Sero' }).catch(() => {});
+        } else if (file) {
+          const url = URL.createObjectURL(file);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        } else {
+          window.open(storyUrl, '_blank');
+        }
+      }
+    }, 1500);
   };
 
   return (
@@ -130,12 +157,12 @@ export function ShareScreen({
         <div className="mt-10 fade-up">
           <div className="rounded-2xl bg-white/70 border border-ink/10 p-4 flex items-center justify-between gap-3 text-left">
             <div className="min-w-0">
-              <p className="text-xs text-ink/50 uppercase tracking-widest">
-                Tu link
+              <p className="text-xs text-ink/50 uppercase tracking-widest leading-tight mb-1">
+                Copia tu link para pegarlo en tu story
               </p>
               <p className="font-medium truncate">{shareUrl}</p>
             </div>
-            <button onClick={copyLink} className="btn-secondary !py-2 !px-4 text-sm">
+            <button onClick={copyLink} className="btn-secondary !py-2 !px-4 text-sm shrink-0">
               {copied ? 'Copiado ✓' : 'Copiar'}
             </button>
           </div>
@@ -146,8 +173,8 @@ export function ShareScreen({
             href={whatsappShareUrl(waMessage)}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-primary flex items-center justify-center gap-2 bg-[#25D366] shadow-none hover:shadow-none"
-            style={{ background: '#25D366' }}
+            className="btn-primary flex items-center justify-center gap-2"
+            style={{ background: '#25D366', boxShadow: 'none' }}
           >
             <IconWhatsApp />
             Enviar a mis amigos
@@ -157,9 +184,15 @@ export function ShareScreen({
             className="btn-secondary flex items-center justify-center gap-2"
           >
             <IconInstagram />
-            Compartir en mi historia
+            {storyStatus === 'opening' ? 'Abriendo Instagram…' : 'Compartir como story'}
           </button>
         </div>
+
+        {storyStatus === 'opening' && (
+          <p className="mt-3 text-ink/50 text-sm fade-up">
+            Tu link ya está copiado — pégalo como sticker en tu story 👆
+          </p>
+        )}
 
         {result.tags.length > 0 && (
           <div className="mt-12 fade-up">
