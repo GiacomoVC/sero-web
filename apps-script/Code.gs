@@ -62,8 +62,21 @@ const ARRAY_FIELDS = {
   'deportes.selected':    true,
 };
 
+function getSpreadsheet_() {
+  // Works when the script is bound to the sheet (Extensions → Apps Script).
+  const bound = SpreadsheetApp.getActiveSpreadsheet();
+  if (bound) return bound;
+  // Standalone script: requires SPREADSHEET_ID in Script Properties.
+  const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (!id) throw new Error(
+    'Script is not bound to a spreadsheet. Either open the sheet → Extensions → Apps Script, ' +
+    'OR add SPREADSHEET_ID to Script Properties.'
+  );
+  return SpreadsheetApp.openById(id);
+}
+
 function getSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
@@ -93,22 +106,31 @@ function resolveSlug_(sh, desired) {
 
 function doPost(e) {
   try {
+    console.log('doPost: START');
+
     const body = JSON.parse(e.postData.contents || '{}');
+    console.log('doPost: desiredSlug =', body.desiredSlug);
+
     const expected = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');
     if (expected && body.secret !== expected) {
-      return _json({ error: 'unauthorized' }, 401);
+      console.log('doPost: UNAUTHORIZED — secret mismatch');
+      return _json({ error: 'unauthorized' });
     }
+
     const payload = body.payload || {};
     const desired = String(body.desiredSlug || '').trim() || 'sero';
 
+    console.log('doPost: getting sheet...');
     const sh = getSheet_();
+    console.log('doPost: sheet name =', sh.getName(), '| rows =', sh.getLastRow());
+
     const slug = resolveSlug_(sh, desired);
+    console.log('doPost: resolved slug =', slug);
 
     const row = COLUMNS.map((col) => {
       if (col === 'timestamp') return new Date();
       if (col === 'slug')      return slug;
       if (col === 'rawJson')   return JSON.stringify(payload);
-
       let val;
       if (col.indexOf('.') > -1) {
         const [a, b] = col.split('.');
@@ -116,15 +138,17 @@ function doPost(e) {
       } else {
         val = payload[col];
       }
-
       if (ARRAY_FIELDS[col]) return (val || []).join(', ');
       return val != null ? val : '';
     });
+
     sh.appendRow(row);
+    console.log('doPost: row appended OK — slug:', slug);
 
     return _json({ slug: slug });
   } catch (err) {
-    return _json({ error: String(err) }, 500);
+    console.error('doPost: ERROR —', String(err));
+    return _json({ error: String(err) });
   }
 }
 
