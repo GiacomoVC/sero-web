@@ -30,7 +30,7 @@ const STEPS = [
 export function Section3HowItWorks() {
   return (
     <section className="relative px-6 py-28 sm:py-36 overflow-hidden">
-      <div className="absolute inset-0 -z-10" style={{ background: '#F2EAF2' }} />
+      <div className="absolute inset-0 -z-10 bg-sand/30" />
 
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-center mb-10 sm:mb-16">

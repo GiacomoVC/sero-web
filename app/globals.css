@@ -8,8 +8,6 @@
   --color-cream: #F6F1E8;
   --color-ink: #292726;
   --color-sand: #D9CFC2;
-  --color-lilac: #B78BB8;
-  --color-gold: #FFD166;
 }
 
 html, body {
@@ -140,25 +138,5 @@ html, body {
   border-radius: 50%;
   filter: blur(60px);
   opacity: 0.55;
-  pointer-events: none;
-}
-
-/* ── Slot machine: word enters from below, clips at container edge ── */
-@keyframes slotIn {
-  0%   { transform: translateY(110%); opacity: 0; }
-  60%  { opacity: 1; }
-  100% { transform: translateY(0);    opacity: 1; }
-}
-.animate-slot-in {
-  animation: slotIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* ── O ring: expands and fades on text change ── */
-@keyframes oRing {
-  0%   { transform: scale(0.9); opacity: 0.7; }
-  100% { transform: scale(2.8); opacity: 0; }
-}
-.animate-o-ring {
-  animation: oRing 0.7s ease-out forwards;
   pointer-events: none;
 }
