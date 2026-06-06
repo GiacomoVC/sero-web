@@ -8,6 +8,8 @@
   --color-cream: #F6F1E8;
   --color-ink: #292726;
   --color-sand: #D9CFC2;
+  --color-lilac: #B78BB8;
+  --color-gold: #FFD166;
 }
 
 html, body {
@@ -124,6 +126,32 @@ html, body {
   50%      { transform: rotate(2deg); }
 }
 .animate-wiggle { animation: wiggle 3.5s ease-in-out infinite; }
+
+/* Slot machine (landing hero word rotation) */
+@keyframes slotIn {
+  0%   { opacity: 0; transform: translateY(52px) scaleY(0.85); }
+  55%  { opacity: 1; transform: translateY(-4px) scaleY(1.02); }
+  100% { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+.animate-slot-in {
+  animation: slotIn 0.34s cubic-bezier(.2,.85,.3,1.05) both;
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+/* Logo glow — overlay div remounted each tick via key={i} */
+@keyframes logoGlowFade {
+  0%   { opacity: 0; }
+  18%  { opacity: 1; }
+  75%  { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+.animate-logo-glow {
+  animation: logoGlowFade 1.8s ease-out both;
+  /* Radial burst at ~83% left where the O sits in the 4-letter mark */
+  background: radial-gradient(ellipse 60px 56px at 83% 52%, rgba(224,106,95,0.42) 0%, transparent 100%);
+  pointer-events: none;
+}
 
 /* Slide between quiz steps */
 @keyframes slideInFromRight {

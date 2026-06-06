@@ -5,16 +5,19 @@ import Link from 'next/link';
 import { Logo } from '../ui/Logo';
 
 const ROTATION = [
-  { label: 'Una serie',  color: '#E06A5F' },
-  { label: 'Un artista', color: '#4D314D' },
-  { label: 'Un libro',   color: '#C0594F' },
-  { label: 'Un deporte', color: '#6B4A6B' },
+  { label: 'Una serie',    color: '#E06A5F' },
+  { label: 'Un artista',   color: '#4D314D' },
+  { label: 'Un libro',     color: '#B78BB8' },
+  { label: 'Una película', color: '#6B4A6B' },
+  { label: 'Un ánime',     color: '#E06A5F' },
+  { label: 'Una pasión',   color: '#4D314D' },
 ];
 
 export function Section2Rotation() {
   const [i, setI] = useState(0);
+
   useEffect(() => {
-    const id = setInterval(() => setI((x) => (x + 1) % ROTATION.length), 1900);
+    const id = setInterval(() => setI((x) => (x + 1) % ROTATION.length), 2100);
     return () => clearInterval(id);
   }, []);
 
@@ -34,25 +37,44 @@ export function Section2Rotation() {
           className="blob animate-blob bg-sand/60"
           style={{ width: 360, height: 360, top: '30%', right: '20%', animationDelay: '4s' }}
         />
+        {/* Lilac accent blob */}
+        <div
+          className="blob animate-blob-slow"
+          style={{ width: 300, height: 300, top: '15%', right: '-8%', background: 'rgba(183,139,184,0.28)', animationDelay: '2s' }}
+        />
+        {/* Gold accent blob */}
+        <div
+          className="blob animate-blob"
+          style={{ width: 220, height: 220, bottom: '20%', left: '5%', background: 'rgba(255,209,102,0.25)', animationDelay: '6s' }}
+        />
       </div>
 
-      {/* Logo */}
+      {/* Logo — PNG is never touched; coral glow overlaid via sibling div with key={i} */}
       <div className="fade-up flex flex-col items-center mb-14 sm:mb-16">
-        <Logo width={220} priority />
-        <p className="mt-2 text-ink/60 text-sm sm:text-base tracking-wide">
+        <div className="relative inline-block" style={{ lineHeight: 0 }}>
+          <Logo width={220} priority />
+          {/* Glow overlay: remounts each tick → restarts logoGlowFade */}
+          <div
+            key={i}
+            className="absolute inset-0 animate-logo-glow rounded-full"
+            aria-hidden="true"
+          />
+        </div>
+        <p className="mt-3 text-ink/60 text-sm sm:text-base tracking-wide">
           Mismos gustos, mejores planes
         </p>
       </div>
 
-      {/* Rotating word */}
+      {/* Heading */}
       <h2 className="fade-up text-3xl sm:text-5xl font-bold tracking-tight max-w-3xl mx-auto leading-[1.1]">
         Piensa en algo que te encanta.
       </h2>
 
-      <div className="mt-10 h-20 sm:h-24 flex items-center justify-center">
+      {/* Slot-machine word — overflow hidden clips the slide */}
+      <div className="mt-10 h-20 sm:h-28 flex items-center justify-center overflow-hidden">
         <span
           key={i}
-          className="inline-block text-4xl sm:text-6xl font-bold animate-slide-rotate"
+          className="animate-slot-in text-4xl sm:text-6xl font-black tracking-tight"
           style={{ color: ROTATION[i].color }}
         >
           {ROTATION[i].label}
@@ -72,7 +94,7 @@ export function Section2Rotation() {
         href="/quiz"
         className="fade-up mt-12 btn-primary text-lg animate-pulse-ring"
       >
-        Cuéntanos qué amas →
+        Encontrar a mi gente →
       </Link>
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-ink/40">

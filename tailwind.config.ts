@@ -10,6 +10,8 @@ const config: Config = {
         cream: '#F6F1E8',
         ink: '#292726',
         sand: '#D9CFC2',
+        lilac: '#B78BB8',
+        gold: '#FFD166',
       },
       fontFamily: {
         sans: ['var(--font-sora)', 'system-ui', 'sans-serif'],
