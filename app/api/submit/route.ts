@@ -87,7 +87,7 @@ export async function POST(req: Request) {
   }).toString()}`;
   const whatsappMessage = buildWhatsAppMessage({
     url,
-    loveExample: pickLoveExample(q),
+    tags,
   });
 
   const result: SubmitResult = {
