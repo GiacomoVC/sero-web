@@ -178,15 +178,15 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
   return (
     <div className="min-h-[100svh] flex flex-col bg-cream">
       <header className="px-6 pt-8 sm:pt-12 max-w-2xl w-full mx-auto">
-        <div className="flex flex-col items-center gap-3">
-          <Logo width={180} priority />
-          <p className="text-ink/60 text-sm tracking-wide">
-            Mismos gustos, mejores planes.
-          </p>
-        </div>
-        <div className="mt-8">
-          <ProgressBar value={progress} />
-        </div>
+        {current?.kind === 'personal' && (
+          <div className="flex flex-col items-center gap-3 mb-8">
+            <Logo width={180} priority />
+            <p className="text-ink/60 text-sm tracking-wide">
+              Mismos gustos, mejores planes.
+            </p>
+          </div>
+        )}
+        <ProgressBar value={progress} />
       </header>
 
       <main className="flex-1 px-6 py-10 max-w-2xl w-full mx-auto">
@@ -423,7 +423,7 @@ function WorldStep({
     const v = q.musica || { categories: [], topArtists: '', exploring: '' };
     return (
       <>
-        <StepTitle title="🎧 Música" sub="Lo que te hace vibrar." />
+        <StepTitle title="🎧 Música" />
         <div className="space-y-6">
           <CategoryChips
             options={CATEGORIES.musica}
@@ -432,7 +432,7 @@ function WorldStep({
           />
           <Field label="Pon 1 o más artistas favoritos (puedes saltar)">
             <textarea
-              className="input min-h-[80px]"
+              className="input min-h-[60px]"
               placeholder="ej. Arctic Monkeys"
               value={v.topArtists}
               onChange={(e) =>
@@ -442,7 +442,7 @@ function WorldStep({
           </Field>
           <Field label="¿Qué artistas (o género) estás explorando último?">
             <textarea
-              className="input min-h-[90px]"
+              className="input min-h-[60px]"
               placeholder="Lo que tengas en repeat ahora"
               value={v.exploring}
               onChange={(e) =>
@@ -467,7 +467,7 @@ function WorldStep({
           />
           <Field label="Pon 1 o más series favoritas (puedes saltar)">
             <textarea
-              className="input min-h-[80px]"
+              className="input min-h-[60px]"
               placeholder="ej. Stranger Things"
               value={v.rewatch}
               onChange={(e) =>
@@ -502,7 +502,7 @@ function WorldStep({
           />
           <Field label="Pon 1 o más películas o directores favoritos (puedes saltar)">
             <textarea
-              className="input min-h-[80px]"
+              className="input min-h-[60px]"
               placeholder="ej. Tarantino, o Interestelar"
               value={v.favorites}
               onChange={(e) =>
@@ -560,7 +560,7 @@ function WorldStep({
           </Field>
           <Field label="Pon 1 o más favoritos (puedes saltar)">
             <textarea
-              className="input min-h-[80px]"
+              className="input min-h-[60px]"
               placeholder="ej. One Piece"
               value={v.favorites}
               onChange={(e) =>
@@ -595,7 +595,7 @@ function WorldStep({
           />
           <Field label="Pon 1 o más libros o autores favoritos (puedes saltar)">
             <textarea
-              className="input min-h-[80px]"
+              className="input min-h-[60px]"
               placeholder="ej. Borges, o Dune"
               value={v.topBooks}
               onChange={(e) =>
@@ -626,10 +626,7 @@ function WorldStep({
     };
     return (
       <>
-        <StepTitle
-          title="⚽ Deportes"
-          sub="Como fan, no como práctica. Elige los que te encanta ver."
-        />
+        <StepTitle title="⚽ Deportes" />
         <div className="flex flex-wrap gap-2.5">
           {SPORTS.map((s) => {
             const active = v.selected.includes(s.id);
@@ -675,7 +672,7 @@ function WorldStep({
           />
           <Field label="Pon 1 o más juegos favoritos (puedes saltar)">
             <textarea
-              className="input min-h-[80px]"
+              className="input min-h-[60px]"
               placeholder="ej. Zelda, o League of Legends"
               value={v.favorites}
               onChange={(e) =>
