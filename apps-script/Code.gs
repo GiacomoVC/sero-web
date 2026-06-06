@@ -16,29 +16,9 @@
  *      Click Deploy. Authorize. Copy the Web app URL.
  *   6. Paste the URL into your Vercel env as APPS_SCRIPT_URL.
  *
- * What it does:
- *   - On POST: appends one row per quiz submission. If the desired slug is
- *     taken, appends -2, -3, ... until free. Returns { slug }.
- *   - All free-text fields are stored verbatim. You read the sheet by hand
- *     to build groups of 5 (no matching algorithm yet, by design).
- *
- * Sheet columns (auto-created on first run). Each world now has a
- * categories column (recall-aid multiselect) BEFORE the open-ended answers:
- *   timestamp | slug | referredBy | firstName | lastName | age | whatsapp |
- *   selectedWorlds | otrosMundos |
- *   musica.categories | musica.topArtists | musica.exploring |
- *   series.categories | series.rewatch | series.recent |
- *   peliculas.categories | peliculas.favorites | peliculas.recent |
- *   anime.categories | anime.preference | anime.favorites | anime.current |
- *   libros.categories | libros.topBooks | libros.recent |
- *   deportes.selected | deportes.otros |
- *   videojuegos.categories | videojuegos.favorites |
- *   diningStyle | dietary | dietaryNote | expPreference | rawJson
- *
- * IMPORTANT: if you already deployed the previous version and have rows in
- * the sheet, the new "categories" columns won't be inserted automatically —
- * delete the "responses" sheet (or clear row 1) and the script will recreate
- * headers on the next submission.
+ * IMPORTANT after updating this file: you must create a NEW deployment
+ * (not edit existing) in Apps Script for changes to take effect.
+ * Also clear row 1 of the "responses" sheet so headers are recreated.
  */
 
 const SHEET_NAME = 'responses';
@@ -47,27 +27,39 @@ const COLUMNS = [
   'timestamp', 'slug', 'referredBy',
   'firstName', 'lastName', 'age', 'whatsapp',
   'selectedWorlds', 'otrosMundos',
-  'musica.categories', 'musica.topArtists', 'musica.exploring',
-  'series.categories', 'series.rewatch', 'series.recent',
-  'peliculas.categories', 'peliculas.favorites', 'peliculas.recent',
+  // Música
+  'musica.categories', 'musica.eras', 'musica.topArtists',
+  // Series
+  'series.categories', 'series.seriesOtro', 'series.region', 'series.netflixPick',
+  // Películas
+  'peliculas.categories', 'peliculas.tipo', 'peliculas.favorites',
+  // Anime
   'anime.categories', 'anime.preference', 'anime.favorites', 'anime.current',
+  // Libros
   'libros.categories', 'libros.topBooks', 'libros.recent',
+  // Deportes
   'deportes.selected', 'deportes.otros',
+  // Videojuegos
   'videojuegos.categories', 'videojuegos.favorites',
+  // Cierre
   'diningStyle', 'dietary', 'dietaryNote', 'expPreference',
   'rawJson',
 ];
 
-// Per-world fields that arrive as arrays and need joining for the sheet.
+// Fields that arrive as arrays — joined with ", " for human reading in the sheet.
 const ARRAY_FIELDS = {
-  'selectedWorlds': true,
-  'musica.categories': true,
-  'series.categories': true,
+  'selectedWorlds':       true,
+  'musica.categories':    true,
+  'musica.eras':          true,
+  'series.categories':    true,
+  'series.region':        true,
+  'series.netflixPick':   true,
   'peliculas.categories': true,
-  'anime.categories': true,
-  'libros.categories': true,
+  'peliculas.tipo':       true,
+  'anime.categories':     true,
+  'libros.categories':    true,
   'videojuegos.categories': true,
-  'deportes.selected': true,
+  'deportes.selected':    true,
 };
 
 function getSheet_() {
@@ -114,10 +106,9 @@ function doPost(e) {
 
     const row = COLUMNS.map((col) => {
       if (col === 'timestamp') return new Date();
-      if (col === 'slug') return slug;
-      if (col === 'rawJson') return JSON.stringify(payload);
+      if (col === 'slug')      return slug;
+      if (col === 'rawJson')   return JSON.stringify(payload);
 
-      // Nested key (e.g. "musica.categories")
       let val;
       if (col.indexOf('.') > -1) {
         const [a, b] = col.split('.');
@@ -126,7 +117,6 @@ function doPost(e) {
         val = payload[col];
       }
 
-      // Array fields → comma-joined for human reading.
       if (ARRAY_FIELDS[col]) return (val || []).join(', ');
       return val != null ? val : '';
     });
@@ -142,7 +132,7 @@ function doGet() {
   return _json({ ok: true, service: 'sero-quiz-webhook' });
 }
 
-function _json(obj, code) {
+function _json(obj) {
   const out = ContentService.createTextOutput(JSON.stringify(obj));
   out.setMimeType(ContentService.MimeType.JSON);
   return out;

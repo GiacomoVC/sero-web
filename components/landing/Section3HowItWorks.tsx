@@ -13,7 +13,7 @@ const STEPS = [
     n: '02',
     emoji: '📲',
     title: 'Comparte tu link a tus amigos',
-    sub: 'Comparte tu link. Tus amigos lo comparten con los suyos, y así crece el grupo de los que aman lo mismo que tú.',
+    sub: 'Tus amigos lo comparten con los suyos, y así crece el grupo de los que aman lo mismo que tú.',
     bg: 'bg-plum/10',
     accent: 'text-plum',
   },
