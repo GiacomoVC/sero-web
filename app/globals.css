@@ -140,24 +140,3 @@ html, body {
   opacity: 0.55;
   pointer-events: none;
 }
-
-/* ── O glow: warm coral pulse on each slot-machine tick ── */
-@keyframes oGlow {
-  0%   { filter: drop-shadow(0 0 0px rgba(224,106,95,0));    transform: scale(1); }
-  35%  { filter: drop-shadow(0 0 14px rgba(224,106,95,0.95)); transform: scale(1.07); }
-  100% { filter: drop-shadow(0 0 0px rgba(224,106,95,0));    transform: scale(1); }
-}
-.animate-o-glow {
-  animation: oGlow 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  display: inline-block;
-}
-
-/* ── Slot machine: word enters from below, clips at container edge ── */
-@keyframes slotIn {
-  0%   { transform: translateY(110%); opacity: 0; }
-  60%  { opacity: 1; }
-  100% { transform: translateY(0);    opacity: 1; }
-}
-.animate-slot-in {
-  animation: slotIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
