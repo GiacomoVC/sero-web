@@ -143,6 +143,7 @@ function doPost(e) {
     });
 
     sh.appendRow(row);
+    SpreadsheetApp.flush(); // force-commit before returning
     console.log('doPost: row appended OK — slug:', slug);
 
     return _json({ slug: slug });
