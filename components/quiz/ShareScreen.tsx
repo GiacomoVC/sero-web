@@ -35,13 +35,20 @@ function IconInstagram() {
 export function ShareScreen({
   result,
   firstName,
+  initialBlob,
 }: {
   result: SubmitResult;
   firstName: string;
+  initialBlob?: File | null;
 }) {
   const [copied, setCopied] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const blobRef = useRef<File | null>(null);
+  const [imgLoaded, setImgLoaded] = useState(!!initialBlob);
+  const blobRef = useRef<File | null>(initialBlob ?? null);
+
+  // Object URL for preview — created once from preloaded blob if available
+  const [previewSrc, setPreviewSrc] = useState<string | null>(() =>
+    initialBlob ? URL.createObjectURL(initialBlob) : null
+  );
 
   const shareUrl =
     typeof window !== 'undefined'
@@ -53,19 +60,23 @@ export function ShareScreen({
       ? result.igUrl.replace(/^https?:\/\/[^/]+/, window.location.origin)
       : result.igUrl;
 
-  // Preload blob for native share (so the button is instant)
+  // If we didn't get a preloaded blob, fetch it now (fallback)
   useEffect(() => {
+    if (blobRef.current) return; // already preloaded — skip
     fetch(storyUrl)
       .then((r) => r.blob())
       .then((blob) => {
-        blobRef.current = new File(
-          [blob],
-          `sero-story-${result.slug}.png`,
-          { type: 'image/png' }
-        );
+        const file = new File([blob], `sero-story-${result.slug}.png`, { type: 'image/png' });
+        blobRef.current = file;
+        setPreviewSrc(URL.createObjectURL(blob));
       })
       .catch(() => {});
   }, [storyUrl, result.slug]);
+
+  // Revoke object URL on unmount
+  useEffect(() => {
+    return () => { if (previewSrc) URL.revokeObjectURL(previewSrc); };
+  }, [previewSrc]);
 
   const waMessage = useMemo(
     () => buildWhatsAppMessage({ url: shareUrl, tags: result.tags }),
@@ -143,7 +154,7 @@ export function ShareScreen({
           )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={storyUrl}
+            src={previewSrc ?? storyUrl}
             alt="Tu story de Sero"
             className={`w-full h-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImgLoaded(true)}

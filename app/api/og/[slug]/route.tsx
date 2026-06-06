@@ -174,7 +174,7 @@ export async function GET(
           </div>
         </div>
 
-        {/* ── BOTTOM CTA ── */}
+        {/* ── CTA (centro de la imagen, deja espacio abajo para sticker) ── */}
         <div
           style={{
             position: 'relative',
@@ -182,8 +182,7 @@ export async function GET(
             flexDirection: 'column',
             alignItems: 'center',
             textAlign: 'center',
-            marginTop: 'auto',
-            paddingBottom: 110,
+            marginTop: 90,
             gap: 36,
             paddingLeft: 80,
             paddingRight: 80,
