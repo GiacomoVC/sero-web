@@ -7,15 +7,15 @@ const CREAM = '#F6F1E8';
 const PLUM  = '#4D314D';
 const CORAL = '#E06A5F';
 const INK   = '#292726';
+const GOLD  = '#D4A84B';
 
-// Deterministic varied styling per tag (no Math.random — caches stably).
 const TAG_STYLES = [
-  { bg: PLUM,  fg: CREAM, size: 50, rot: -3 },
-  { bg: CORAL, fg: CREAM, size: 56, rot:  2 },
-  { bg: INK,   fg: CREAM, size: 44, rot: -2 },
-  { bg: CORAL, fg: CREAM, size: 48, rot:  3 },
-  { bg: PLUM,  fg: CREAM, size: 52, rot: -4 },
-  { bg: INK,   fg: CREAM, size: 46, rot:  2 },
+  { bg: CORAL, fg: CREAM  },
+  { bg: CREAM, fg: PLUM   },
+  { bg: PLUM,  fg: CREAM  },
+  { bg: GOLD,  fg: INK    },
+  { bg: INK,   fg: CREAM  },
+  { bg: CREAM, fg: CORAL  },
 ];
 
 export async function GET(
@@ -23,183 +23,180 @@ export async function GET(
   { params }: { params: { slug: string } }
 ) {
   const { searchParams } = new URL(req.url);
-  const name    = searchParams.get('n') || humanizeSlug(params.slug).split(' ')[0];
-  const tagsRaw = searchParams.get('t') || '';
-  const tags    = tagsRaw
-    .split('|')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 6);
+  const firstName = searchParams.get('n') || humanizeSlug(params.slug).split(' ')[0];
+  const tagsRaw   = searchParams.get('t') || '';
+  const tags = tagsRaw.split('|').map((s) => s.trim()).filter(Boolean).slice(0, 6);
 
+  /* ── Layout constants ── */
+  const W       = 1080;
+  const H       = 1920;
+  const SPLIT   = 820;   // plum section height
+  const RADIUS  = 56;
 
   return new ImageResponse(
     (
       <div
         style={{
-          width: '1080px',
-          height: '1920px',
-          background: PLUM,
+          width: W, height: H,
+          background: CREAM,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
           fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
-          overflow: 'hidden',
           position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        {/* Decorative discs */}
-        <div style={{ position: 'absolute', top: -180, right: -180, width: 560, height: 560, borderRadius: 9999, background: CORAL, opacity: 0.35, display: 'flex' }} />
-        <div style={{ position: 'absolute', bottom: -200, left: -160, width: 520, height: 520, borderRadius: 9999, background: CREAM, opacity: 0.08, display: 'flex' }} />
-
-        {/* ── LOGO + SLOGAN ── */}
+        {/* ── PLUM TOP SECTION ── */}
         <div
           style={{
-            position: 'relative',
+            width: W,
+            height: SPLIT,
+            background: PLUM,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            paddingTop: 100,
-            gap: 14,
+            justifyContent: 'center',
+            position: 'relative',
+            overflow: 'hidden',
+            flexShrink: 0,
           }}
         >
-          <div
-            style={{
-              fontSize: 100,
-              fontWeight: 800,
-              letterSpacing: '-3px',
-              color: CREAM,
-              display: 'flex',
-              alignItems: 'baseline',
-            }}
-          >
-            <span>ser</span>
-            <span style={{ color: CORAL }}>o</span>
-          </div>
-          <div
-            style={{
-              fontSize: 26,
-              color: CREAM,
-              opacity: 0.65,
-              letterSpacing: '7px',
-              textTransform: 'uppercase',
-              display: 'flex',
-            }}
-          >
-            mismos gustos, mejores planes
-          </div>
-        </div>
+          {/* Decorative coral disc — top right */}
+          <div style={{
+            position: 'absolute', top: -140, right: -140,
+            width: 480, height: 480, borderRadius: 9999,
+            background: CORAL, opacity: 0.5, display: 'flex',
+          }} />
+          {/* Decorative cream disc — bottom left */}
+          <div style={{
+            position: 'absolute', bottom: -80, left: -80,
+            width: 300, height: 300, borderRadius: 9999,
+            background: CREAM, opacity: 0.07, display: 'flex',
+          }} />
 
-        {/* ── CARD: "Los mundos que amo" + tags ── */}
-        <div
-          style={{
-            position: 'relative',
-            margin: '60px 70px 0 70px',
-            background: CREAM,
-            borderRadius: 60,
-            padding: '64px 60px 72px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 44,
-            transform: 'rotate(-1.2deg)',
-            boxShadow: '0 30px 0 rgba(0,0,0,0.18)',
-          }}
-        >
-          {/* Card heading */}
-          <div
-            style={{
-              fontSize: 64,
-              fontWeight: 800,
-              color: INK,
-              letterSpacing: '-2px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 18,
-            }}
-          >
-            <span>Los mundos que amo</span>
-            <span style={{ fontSize: 54 }}>💜</span>
+          {/* Wordmark */}
+          <div style={{
+            position: 'absolute', top: 72, left: 0, right: 0,
+            display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 2,
+          }}>
+            <span style={{ fontSize: 56, fontWeight: 800, color: CREAM, letterSpacing: '-2px', display: 'flex' }}>ser</span>
+            <span style={{ fontSize: 56, fontWeight: 800, color: CORAL, letterSpacing: '-2px', display: 'flex' }}>o</span>
           </div>
 
-          {/* Tag pills */}
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 22,
-              maxWidth: 860,
-            }}
-          >
-            {tags.length === 0 ? (
-              <div
-                style={{
-                  background: PLUM,
-                  color: CREAM,
-                  borderRadius: 999,
-                  padding: '20px 38px',
-                  fontSize: 42,
-                  fontWeight: 700,
-                  display: 'flex',
-                }}
-              >
-                lo que más amo
-              </div>
-            ) : (
-              tags.map((tag, idx) => {
-                const s = TAG_STYLES[idx % TAG_STYLES.length];
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      background: s.bg,
-                      color: s.fg,
-                      borderRadius: 999,
-                      padding: '18px 34px',
-                      fontSize: s.size,
-                      fontWeight: 800,
-                      letterSpacing: '-1px',
-                      transform: `rotate(${s.rot}deg)`,
-                      display: 'flex',
-                      maxWidth: 700,
-                      boxShadow: '0 6px 0 rgba(0,0,0,0.15)',
-                    }}
-                  >
-                    {tag}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* ── CTA al fondo — espacio libre encima para el sticker de link ── */}
-        <div
-          style={{
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+          {/* First name */}
+          <div style={{
+            fontSize: 164,
+            fontWeight: 800,
+            color: CREAM,
+            letterSpacing: '-6px',
+            lineHeight: 0.92,
             textAlign: 'center',
-            marginTop: 'auto',
-            paddingBottom: 110,
-            paddingLeft: 80,
-            paddingRight: 80,
+            maxWidth: 940,
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            marginTop: 40,
+          }}>
+            {firstName}
+          </div>
+
+          {/* Subtitle */}
+          <div style={{
+            marginTop: 28,
+            fontSize: 46,
+            fontWeight: 600,
+            color: CREAM,
+            opacity: 0.75,
+            letterSpacing: '-1px',
+            display: 'flex',
+          }}>
+            tiene muy buen gusto.
+          </div>
+        </div>
+
+        {/* ── CREAM BOTTOM SECTION ── */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            paddingTop: 64,
+            paddingBottom: 80,
+            paddingLeft: 72,
+            paddingRight: 72,
+            gap: 0,
           }}
         >
-          <div
-            style={{
-              fontSize: 46,
-              fontWeight: 700,
-              color: CREAM,
-              lineHeight: 1.3,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
+          {/* Section label */}
+          <div style={{
+            fontSize: 28,
+            fontWeight: 700,
+            color: PLUM,
+            opacity: 0.5,
+            letterSpacing: '6px',
+            textTransform: 'uppercase',
+            marginBottom: 44,
+            display: 'flex',
+          }}>
+            Sus mundos
+          </div>
+
+          {/* Tag cloud */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: 20,
+            maxWidth: 920,
+          }}>
+            {(tags.length ? tags : ['Mis gustos']).map((tag, i) => {
+              const s = TAG_STYLES[i % TAG_STYLES.length];
+              return (
+                <div
+                  key={i}
+                  style={{
+                    background: s.bg,
+                    color: s.fg,
+                    borderRadius: RADIUS,
+                    paddingTop: 22,
+                    paddingBottom: 22,
+                    paddingLeft: 40,
+                    paddingRight: 40,
+                    fontSize: 52,
+                    fontWeight: 800,
+                    letterSpacing: '-1.5px',
+                    display: 'flex',
+                    boxShadow: '0 4px 0 rgba(0,0,0,0.10)',
+                    transform: i % 2 === 0 ? 'rotate(-1.5deg)' : 'rotate(1.5deg)',
+                  }}
+                >
+                  {tag}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Divider */}
+          <div style={{
+            width: 80, height: 4, borderRadius: 99,
+            background: PLUM, opacity: 0.15,
+            marginTop: 'auto', marginBottom: 36,
+            display: 'flex',
+          }} />
+
+          {/* CTA */}
+          <div style={{
+            fontSize: 40,
+            fontWeight: 700,
+            color: PLUM,
+            lineHeight: 1.3,
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 6,
+          }}>
             <span>¿Y tú? Tu gente está</span>
             <span>a un amigo de distancia.</span>
             <span>Encuéntralos aquí 👆</span>
@@ -207,9 +204,6 @@ export async function GET(
         </div>
       </div>
     ),
-    {
-      width: 1080,
-      height: 1920,
-    }
+    { width: W, height: H }
   );
 }
