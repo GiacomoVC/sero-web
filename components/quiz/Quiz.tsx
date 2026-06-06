@@ -429,7 +429,7 @@ function WorldStep({
   ) => void;
 }) {
   if (world === 'musica') {
-    const v = q.musica || { categories: [], eras: [], topArtists: '' };
+    const v = { categories: [] as string[], eras: [] as string[], topArtists: '', ...q.musica };
     return (
       <>
         <StepTitle title="🎧 Música" />
@@ -460,7 +460,7 @@ function WorldStep({
     );
   }
   if (world === 'series') {
-    const v = q.series || { categories: [], seriesOtro: '', region: [], netflixPick: [] };
+    const v = { categories: [] as string[], seriesOtro: '', region: [] as string[], netflixPick: [] as string[], ...q.series };
     return (
       <>
         <StepTitle title="📺 Series" />
@@ -499,7 +499,7 @@ function WorldStep({
     );
   }
   if (world === 'peliculas') {
-    const v = q.peliculas || { categories: [], tipo: [], favorites: '' };
+    const v = { categories: [] as string[], tipo: [] as string[], favorites: '', ...q.peliculas };
     return (
       <>
         <StepTitle title="🎬 Películas" />
@@ -531,8 +531,7 @@ function WorldStep({
   }
   if (world === 'anime') {
     const v =
-      q.anime ||
-      { categories: [], preference: 'ambos' as AnimeMangaPref, favorites: '', current: '' };
+      { categories: [] as string[], preference: 'ambos' as AnimeMangaPref, favorites: '', current: '', ...q.anime };
     const opts: { id: AnimeMangaPref; label: string }[] = [
       { id: 'anime', label: 'Anime' },
       { id: 'manga', label: 'Manga' },
@@ -588,7 +587,7 @@ function WorldStep({
     );
   }
   if (world === 'libros') {
-    const v = q.libros || { categories: [], topBooks: '', recent: '' };
+    const v = { categories: [] as string[], topBooks: '', recent: '', ...q.libros };
     return (
       <>
         <StepTitle title="📚 Libros" />
@@ -665,7 +664,7 @@ function WorldStep({
     );
   }
   if (world === 'videojuegos') {
-    const v = q.videojuegos || { categories: [], favorites: '' };
+    const v = { categories: [] as string[], favorites: '', ...q.videojuegos };
     return (
       <>
         <StepTitle title="🎮 Videojuegos" />
