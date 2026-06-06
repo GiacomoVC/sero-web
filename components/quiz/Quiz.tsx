@@ -430,7 +430,7 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('musica', { categories: next })}
           />
-          <Field label="Un artista que ames de cada género seleccionado 👇 (puedes poner más, o saltar)">
+          <Field label="Pon 1 o más artistas favoritos (puedes saltar)">
             <textarea
               className="input min-h-[80px]"
               placeholder="ej. Arctic Monkeys"
@@ -465,7 +465,7 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('series', { categories: next })}
           />
-          <Field label="Una serie que ames de cada tipo que marcaste 👇 (puedes poner más, o saltar)">
+          <Field label="Pon 1 o más series favoritas (puedes saltar)">
             <textarea
               className="input min-h-[80px]"
               placeholder="ej. Stranger Things"
@@ -500,7 +500,7 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('peliculas', { categories: next })}
           />
-          <Field label="Una película o director que ames de cada tipo que marcaste 👇 (puedes poner más, o saltar)">
+          <Field label="Pon 1 o más películas o directores favoritos (puedes saltar)">
             <textarea
               className="input min-h-[80px]"
               placeholder="ej. Tarantino, o Interestelar"
@@ -558,7 +558,7 @@ function WorldStep({
               ))}
             </div>
           </Field>
-          <Field label="Un anime o manga que ames de cada tipo que marcaste 👇 (puedes poner más, o saltar)">
+          <Field label="Pon 1 o más favoritos (puedes saltar)">
             <textarea
               className="input min-h-[80px]"
               placeholder="ej. One Piece"
@@ -593,7 +593,7 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('libros', { categories: next })}
           />
-          <Field label="Un libro o autor que ames de cada tipo que marcaste 👇 (puedes poner más, o saltar)">
+          <Field label="Pon 1 o más libros o autores favoritos (puedes saltar)">
             <textarea
               className="input min-h-[80px]"
               placeholder="ej. Borges, o Dune"
@@ -673,7 +673,7 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('videojuegos', { categories: next })}
           />
-          <Field label="Un juego que ames de cada tipo que marcaste 👇 (puedes poner más, o saltar)">
+          <Field label="Pon 1 o más juegos favoritos (puedes saltar)">
             <textarea
               className="input min-h-[80px]"
               placeholder="ej. Zelda, o League of Legends"
