@@ -26,7 +26,6 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
   if (q.musica) {
     const p = [
       ...parseFreeText(q.musica.topArtists),
-      ...parseFreeText(q.musica.exploring),
       ...chips(q.musica.categories),
     ];
     if (p.length) pools.push(p);
@@ -34,9 +33,10 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
 
   if (q.series) {
     const p = [
-      ...parseFreeText(q.series.rewatch),
-      ...parseFreeText(q.series.recent),
+      ...chips(q.series.netflixPick),
+      ...parseFreeText(q.series.seriesOtro),
       ...chips(q.series.categories),
+      ...chips(q.series.region),
     ];
     if (p.length) pools.push(p);
   }
@@ -44,7 +44,7 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
   if (q.peliculas) {
     const p = [
       ...parseFreeText(q.peliculas.favorites),
-      ...parseFreeText(q.peliculas.recent),
+      ...chips(q.peliculas.tipo),
       ...chips(q.peliculas.categories),
     ];
     if (p.length) pools.push(p);

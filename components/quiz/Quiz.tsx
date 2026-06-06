@@ -4,7 +4,16 @@ import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Logo } from '../ui/Logo';
 import { ProgressBar } from './ProgressBar';
-import { CATEGORIES, MAX_WORLDS, SPORTS, WORLDS } from '@/lib/worlds';
+import {
+  CATEGORIES,
+  MAX_WORLDS,
+  MUSIC_ERAS,
+  NETFLIX_PICKS,
+  PELICULA_TIPOS,
+  SERIES_REGIONS,
+  SPORTS,
+  WORLDS,
+} from '@/lib/worlds';
 import type {
   AnimeMangaPref,
   Dietary,
@@ -108,11 +117,11 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
           // topArtists es opcional ("puedes saltar")
           return !!(q.musica?.categories?.length);
         case 'series':
-          // rewatch es opcional
-          return !!(q.series?.categories?.length && q.series?.recent?.trim());
+          if (!q.series?.categories?.length) return false;
+          if (q.series.categories.includes('Otro') && !q.series.seriesOtro?.trim()) return false;
+          return true;
         case 'peliculas':
-          // favorites es opcional
-          return !!(q.peliculas?.categories?.length && q.peliculas?.recent?.trim());
+          return !!(q.peliculas?.categories?.length);
         case 'anime':
           // favorites es opcional
           return !!(
@@ -420,7 +429,7 @@ function WorldStep({
   ) => void;
 }) {
   if (world === 'musica') {
-    const v = q.musica || { categories: [], topArtists: '', exploring: '' };
+    const v = q.musica || { categories: [], eras: [], topArtists: '' };
     return (
       <>
         <StepTitle title="🎧 Música" />
@@ -430,23 +439,19 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('musica', { categories: next })}
           />
-          <Field label="Pon 1 o más artistas favoritos (puedes saltar)">
-            <textarea
-              className="input min-h-[60px]"
-              placeholder="ej. Arctic Monkeys"
+          <CategoryChips
+            label="¿Qué épocas te gustan más?"
+            options={MUSIC_ERAS}
+            value={v.eras}
+            onChange={(next) => updateWorld('musica', { eras: next })}
+          />
+          <Field label="(OPCIONAL) ¿Cuáles son tus top 3 artistas del momento?">
+            <input
+              className="input"
+              placeholder="ej. Arctic Monkeys, Bad Bunny, Billie Eilish"
               value={v.topArtists}
               onChange={(e) =>
                 updateWorld('musica', { topArtists: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="¿Qué artistas (o género) estás explorando último?">
-            <textarea
-              className="input min-h-[60px]"
-              placeholder="Lo que tengas en repeat ahora"
-              value={v.exploring}
-              onChange={(e) =>
-                updateWorld('musica', { exploring: e.target.value })
               }
             />
           </Field>
@@ -455,7 +460,7 @@ function WorldStep({
     );
   }
   if (world === 'series') {
-    const v = q.series || { categories: [], rewatch: '', recent: '' };
+    const v = q.series || { categories: [], seriesOtro: '', region: [], netflixPick: [] };
     return (
       <>
         <StepTitle title="📺 Series" />
@@ -465,32 +470,36 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('series', { categories: next })}
           />
-          <Field label="Pon 1 o más series favoritas (puedes saltar)">
-            <textarea
-              className="input min-h-[60px]"
-              placeholder="ej. Stranger Things"
-              value={v.rewatch}
-              onChange={(e) =>
-                updateWorld('series', { rewatch: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="¿Qué serie te atrapó hace poco?">
-            <input
-              className="input"
-              placeholder="The Bear, Severance, …"
-              value={v.recent}
-              onChange={(e) =>
-                updateWorld('series', { recent: e.target.value })
-              }
-            />
-          </Field>
+          {v.categories.includes('Otro') && (
+            <Field label="¿Qué otro género?">
+              <input
+                className="input"
+                placeholder="Escribe aquí"
+                value={v.seriesOtro || ''}
+                onChange={(e) =>
+                  updateWorld('series', { seriesOtro: e.target.value })
+                }
+              />
+            </Field>
+          )}
+          <CategoryChips
+            label="Región de tus series favoritas:"
+            options={SERIES_REGIONS}
+            value={v.region}
+            onChange={(next) => updateWorld('series', { region: next })}
+          />
+          <CategoryChips
+            label="De las últimas series en Netflix, ¿cuál te gustó más?"
+            options={NETFLIX_PICKS}
+            value={v.netflixPick}
+            onChange={(next) => updateWorld('series', { netflixPick: next })}
+          />
         </div>
       </>
     );
   }
   if (world === 'peliculas') {
-    const v = q.peliculas || { categories: [], favorites: '', recent: '' };
+    const v = q.peliculas || { categories: [], tipo: [], favorites: '' };
     return (
       <>
         <StepTitle title="🎬 Películas" />
@@ -500,23 +509,19 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('peliculas', { categories: next })}
           />
-          <Field label="Pon 1 o más películas o directores favoritos (puedes saltar)">
-            <textarea
-              className="input min-h-[60px]"
-              placeholder="ej. Tarantino, o Interestelar"
+          <CategoryChips
+            label="¿Qué tipo? Todas las que te gusten"
+            options={PELICULA_TIPOS}
+            value={v.tipo}
+            onChange={(next) => updateWorld('peliculas', { tipo: next })}
+          />
+          <Field label="(OPCIONAL) Pon 1 o más de tus favoritas">
+            <input
+              className="input"
+              placeholder="ej. Tarantino, Interestelar, El padrino…"
               value={v.favorites}
               onChange={(e) =>
                 updateWorld('peliculas', { favorites: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="¿Qué película te atrapó hace poco?">
-            <input
-              className="input"
-              placeholder="Past Lives, Anatomy of a Fall, …"
-              value={v.recent}
-              onChange={(e) =>
-                updateWorld('peliculas', { recent: e.target.value })
               }
             />
           </Field>

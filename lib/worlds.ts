@@ -44,27 +44,22 @@ export const CATEGORIES: Record<
   ],
   series: [
     'Drama',
-    'Comedia / sitcom',
+    'Comedia',
     'Sci-fi / fantasía',
-    'Thriller / crimen',
-    'K-dramas y series asiáticas',
-    'Reality / concursos',
-    'Documentales / true crime',
-    'Animación',
+    'Crimen / Thriller',
+    'Realities',
+    'Documentales / True Crime',
+    'Acción / aventura',
     'Otro',
   ],
   peliculas: [
-    'Acción / aventura',
-    'Sci-fi / fantasía',
-    'Terror',
     'Drama',
     'Comedia',
-    'Cine de autor / indie',
-    'Clásicos',
-    'Animación',
-    'Cine asiático',
-    'Superhéroes',
-    'Otro',
+    'Sci-fi / fantasía',
+    'Crimen / Thriller',
+    'Realities',
+    'Documentales / True Crime',
+    'Acción / Aventura',
   ],
   anime: [
     'Shonen / acción',
@@ -104,3 +99,26 @@ export const CATEGORIES: Record<
 };
 
 export const MAX_WORLDS = 4;
+
+export const MUSIC_ERAS = ['50s', '60s', '70s', '80s', '90s', '2000s', '2010s a más'];
+
+export const SERIES_REGIONS = ['Americanas', 'Latinas', 'Europeas', 'Asiáticas'];
+
+export const NETFLIX_PICKS = [
+  'Stranger Things',
+  'El juego del calamar',
+  'Merlina',
+  'Bridgerton',
+  'Dahmer',
+];
+
+export const PELICULA_TIPOS = [
+  'Clásicos',
+  'Cine de autor / indie',
+  'Hollywood moderno',
+  'Bollywood',
+  'Asiáticas',
+  'Europeas',
+  'Latino',
+  'Pixar / Disney / Dreamworks',
+];

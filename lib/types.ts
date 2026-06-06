@@ -34,9 +34,9 @@ export interface QuizResponses {
   otrosMundos?: string;
 
   // Per-world answers (categories = recall-aid multiselect, then open Qs)
-  musica?: { categories: string[]; topArtists: string; exploring: string };
-  series?: { categories: string[]; rewatch: string; recent: string };
-  peliculas?: { categories: string[]; favorites: string; recent: string };
+  musica?: { categories: string[]; eras: string[]; topArtists: string };
+  series?: { categories: string[]; seriesOtro?: string; region: string[]; netflixPick: string[] };
+  peliculas?: { categories: string[]; tipo: string[]; favorites: string };
   anime?: {
     categories: string[];
     preference: AnimeMangaPref;
