@@ -174,7 +174,7 @@ export async function GET(
           </div>
         </div>
 
-        {/* ── CTA (centro de la imagen, deja espacio abajo para sticker) ── */}
+        {/* ── CTA al fondo — espacio libre encima para el sticker de link ── */}
         <div
           style={{
             position: 'relative',
@@ -182,8 +182,8 @@ export async function GET(
             flexDirection: 'column',
             alignItems: 'center',
             textAlign: 'center',
-            marginTop: 90,
-            gap: 36,
+            marginTop: 'auto',
+            paddingBottom: 110,
             paddingLeft: 80,
             paddingRight: 80,
           }}
@@ -193,7 +193,7 @@ export async function GET(
               fontSize: 46,
               fontWeight: 700,
               color: CREAM,
-              lineHeight: 1.25,
+              lineHeight: 1.3,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -202,7 +202,7 @@ export async function GET(
           >
             <span>¿Y tú? Tu gente está</span>
             <span>a un amigo de distancia.</span>
-            <span>Encuéntralos aquí 👇</span>
+            <span>Encuéntralos aquí 👆</span>
           </div>
         </div>
       </div>

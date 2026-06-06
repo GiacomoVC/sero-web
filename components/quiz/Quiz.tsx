@@ -25,6 +25,7 @@ import type {
   World,
 } from '@/lib/types';
 import { ShareScreen } from './ShareScreen';
+import { PreparingScreen } from './PreparingScreen';
 
 type Step =
   | { kind: 'personal' }
@@ -57,9 +58,9 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
     referredBy: ref,
   }));
   const [submitting, setSubmitting] = useState(false);
-  const [preparingStory, setPreparingStory] = useState(false);
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [storyBlob, setStoryBlob] = useState<File | null>(null);
+  const [storyReady, setStoryReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Build the list of steps dynamically based on selected worlds
@@ -166,27 +167,26 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       if (!res.ok) throw new Error('No pudimos guardar tu respuesta.');
       const data: SubmitResult = await res.json();
 
-      // Prefetch story image while still showing spinner so ShareScreen is instant
+      // Show PreparingScreen while the story image generates in the background
+      setResult(data);
       setSubmitting(false);
-      setPreparingStory(true);
+
       const resolvedStoryUrl = data.igUrl.replace(/^https?:\/\/[^/]+/, window.location.origin);
       try {
         const imgRes = await Promise.race<Response>([
           fetch(resolvedStoryUrl),
           new Promise<Response>((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), 6000)
+            setTimeout(() => reject(new Error('timeout')), 8000)
           ),
         ]);
         const blob = await imgRes.blob();
         setStoryBlob(new File([blob], `sero-story-${data.slug}.png`, { type: 'image/png' }));
-      } catch { /* timeout or network error — show share screen anyway */ }
+      } catch { /* timeout — show share screen anyway */ }
 
-      setResult(data);
+      setStoryReady(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
       setSubmitting(false);
-    } finally {
-      setPreparingStory(false);
     }
   };
 
@@ -199,8 +199,11 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
     }
   };
 
-  if (result) {
+  if (result && storyReady) {
     return <ShareScreen result={result} firstName={q.firstName} initialBlob={storyBlob} />;
+  }
+  if (result && !storyReady) {
+    return <PreparingScreen />;
   }
 
   return (
@@ -248,15 +251,13 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
             type="button"
             onClick={next}
             className="btn-primary"
-            disabled={!canAdvance() || submitting || preparingStory}
+            disabled={!canAdvance() || submitting}
           >
-            {preparingStory
-              ? 'Preparando tu perfil…'
-              : submitting
-                ? 'Guardando…'
-                : stepIdx === totalSteps - 1
-                  ? 'Terminar'
-                  : 'Continuar'}
+            {submitting
+              ? 'Guardando…'
+              : stepIdx === totalSteps - 1
+                ? 'Terminar'
+                : 'Continuar'}
           </button>
         </div>
       </footer>
