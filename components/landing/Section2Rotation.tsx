@@ -49,14 +49,29 @@ export function Section2Rotation() {
         />
       </div>
 
-      {/* Logo — PNG is never touched; coral glow overlaid via sibling div with key={i} */}
+      {/* Logo — PNG never modified; two-layer O light effect on top */}
       <div className="fade-up flex flex-col items-center mb-14 sm:mb-16">
         <div className="relative inline-block" style={{ lineHeight: 0 }}>
           <Logo width={220} priority />
-          {/* Glow overlay: remounts each tick → restarts logoGlowFade */}
+
+          {/*
+            O sits at ~right:50px top:61px (radius≈21px) in the 220×124 display.
+            Layer 1: coral ring that expands out from the O stroke
+          */}
           <div
-            key={i}
-            className="absolute inset-0 animate-logo-glow rounded-full"
+            key={`ring-${i}`}
+            className="absolute animate-o-ring rounded-full pointer-events-none"
+            style={{ width: 44, height: 44, right: 28, top: 39 }}
+            aria-hidden="true"
+          />
+
+          {/*
+            Layer 2: white glint at top-left arc — like light catching glass
+          */}
+          <div
+            key={`glint-${i}`}
+            className="absolute animate-o-glint rounded-full pointer-events-none"
+            style={{ width: 9, height: 9, right: 62, top: 43 }}
             aria-hidden="true"
           />
         </div>

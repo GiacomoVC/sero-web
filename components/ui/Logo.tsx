@@ -1,6 +1,7 @@
 import Image from 'next/image';
 
-const RATIO = 2; // logo.png is 1440x720
+// sero logo nu.png is 1280×720
+const RATIO = 1280 / 720;
 
 export function Logo({
   width = 220,
@@ -13,7 +14,7 @@ export function Logo({
 }) {
   return (
     <Image
-      src="/logo.png"
+      src="/sero logo nu.png"
       alt="Sero"
       width={width}
       height={Math.round(width / RATIO)}
