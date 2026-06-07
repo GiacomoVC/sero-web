@@ -5,13 +5,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        coral: '#E06A5F',
-        plum: '#4D314D',
-        cream: '#F6F1E8',
-        ink: '#292726',
-        sand: '#D9CFC2',
-        lilac: '#B78BB8',
-        gold: '#FFD166',
+        coral:   '#FF6B5E',
+        orange:  '#FF8A3D',
+        plum:    '#5B2D82',
+        cream:   '#FAF8F5',
+        ink:     '#18181B',
+        neutral: '#8F8F98',
+        success: '#37C978',
+        sand:    '#E8E3DC',
+        lilac:   '#B78BB8',
+        gold:    '#FFD166',
       },
       fontFamily: {
         sans: ['var(--font-sora)', 'system-ui', 'sans-serif'],
