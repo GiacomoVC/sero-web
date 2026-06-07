@@ -32,7 +32,7 @@ export function ShareScreen({
     // Progress counter — recording takes ~10.6 s
     const start    = Date.now();
     const interval = setInterval(() => {
-      setPct(Math.min(Math.round((Date.now() - start) / 10600 * 100), 99));
+      setPct(Math.min(Math.round((Date.now() - start) / 8200 * 100), 99));
     }, 200);
 
     try {
