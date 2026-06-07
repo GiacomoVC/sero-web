@@ -220,3 +220,31 @@ html, body {
 }
 .animate-ticker      { animation: ticker 30s linear infinite; }
 .animate-ticker-rev  { animation: ticker 36s linear infinite reverse; }
+
+/* ── Story card animations ──────────────────────────────────────────────── */
+
+/* Chip drifts across the card (translateX uses --chip-dx CSS var) */
+@keyframes scChipMove {
+  from { transform: translateX(0);                  opacity: 0; }
+  10%  { opacity: 1; }
+  85%  { opacity: 1; }
+  to   { transform: translateX(var(--chip-dx, 400px)); opacity: 0; }
+}
+
+/* O draws itself in via stroke-dashoffset */
+@keyframes scDrawO {
+  from { stroke-dashoffset: 328; }
+  to   { stroke-dashoffset: 0;   }
+}
+
+/* Subtle O breathing — alive but not distracting */
+@keyframes scBreathe {
+  0%, 100% { transform: rotate(-24deg) scale(1);    opacity: 1;    }
+  50%       { transform: rotate(-24deg) scale(1.03); opacity: 0.92; }
+}
+
+/* Detached-segment micro-drift */
+@keyframes scSegmentDrift {
+  0%, 100% { stroke-dashoffset: 0;    }
+  50%       { stroke-dashoffset: -3;  }
+}
