@@ -3,18 +3,19 @@
 /**
  * Sero wordmark — SVG, Opción A.
  *
- * "ser"  →  Sora 500, plum #4D314D, letter-spacing −1.5
- * "o"    →  open coral ring #E06A5F, gap ≈ 24° at 1 o'clock
+ * "ser"  →  Sora 500, near-black #1A1A1A
+ * "o"    →  open coral ring #E06A5F, diameter = x-height of "ser"
  *
  * Mount animation: O spins from 7 o'clock → 1 o'clock (0.8 s),
- * then shines exactly 1 s and stops permanently.
+ * then shines exactly 1 s and stops.
  *
- * animKey: fires ripple+glint burst on each slot-machine tick.
+ * animKey: fires ripple + glint on each slot-machine tick.
  *
- * ── Tuning ──────────────────────────────────────────────────────────────────
- *  If "ser" renders wider → increase CX by 2–4 units (and vice-versa).
- *  If overall logo looks off-center → shift TX and CX together by same Δ.
- * ────────────────────────────────────────────────────────────────────────────
+ * ── Tuning ─────────────────────────────────────────────────────────────────
+ *  "ser" too far from O  →  lower CX by 2–4
+ *  "ser" overlaps O      →  raise CX by 2–4
+ *  logo off-center       →  shift TX and CX by the same Δ
+ * ───────────────────────────────────────────────────────────────────────────
  */
 
 interface LogoProps {
@@ -24,27 +25,27 @@ interface LogoProps {
   animKey?: number;
 }
 
-// ─── Geometry (SVG user units — viewBox 0 0 180 50) ─────────────────────────
-const VW   = 180;
-const VH   = 50;
+// ─── Geometry (viewBox 0 0 170 46) ─────────────────────────────────────────
+const VW   = 170;
+const VH   = 46;
 
-const FONT = 42;          // font-size
-const BASE = 40;          // baseline y
-const TX   = 10;          // "ser" start x
+const FONT = 42;       // font-size
+const BASE = 40;       // baseline y
+const TX   = 44;       // "ser" start x  (centers the word inside the viewBox)
 
-// At Sora 500 / 42 px, "ser" advance ≈ 58 px (with −1.5 letter-spacing)
-// → "r" right edge ≈ TX + 58 = 68
-// O left edge should be ~1 px after "r": 69
-// O center: 69 + R = 69 + 12.5 = 81.5 → CX = 82
-const CX   = 82;          // ← adjust here if gap looks wrong
-const CY   = 27;          // baseline − x-height/2  (40 − 13 = 27)
-const R    = 12.5;
-const SW   = 3.0;         // stroke weight proportional to Sora 500
+// Sora 500 / 42 px x-height ≈ 22 px  →  target O outer ⌀ = 22 px
+// outer radius = R + SW/2  →  R = 11 - 1.3 = 9.7 → round to 10.5 for stroke center
+// "ser" advance ≈ 58 px (with −1.5 letter-spacing)  →  ends at TX + 58 = 102
+// O left edge 1 px after "r": 103  →  CX = 103 + R = 114
+const CX   = 114;      // ← adjust ±2–4 if gap looks wrong
+const CY   = 29;       // baseline − (R + SW/2)  →  40 − 11 = 29
+const R    = 10.5;
+const SW   = 2.6;      // stroke proportional to Sora 500 weight
 
 const CIRC = 2 * Math.PI * R;
 const DASH = CIRC * 0.9333;   // 336° drawn
-const GAP  = CIRC * 0.0667;   // 24° open
-// ─────────────────────────────────────────────────────────────────────────────
+const GAP  = CIRC * 0.0667;   // 24° open → gap at 1 o'clock via CSS rotation
+// ───────────────────────────────────────────────────────────────────────────
 
 export function Logo({
   width     = 220,
@@ -53,6 +54,8 @@ export function Logo({
   animKey,
 }: LogoProps) {
   const height = Math.round(width * VH / VW);
+
+  // Glint at the gap opening (~1 o'clock = upper-right arc)
   const glintCx = CX + R * 0.72;
   const glintCy = CY - R * 0.72;
 
@@ -68,20 +71,20 @@ export function Logo({
       aria-label="sero"
       role="img"
     >
-      {/* "ser" */}
+      {/* "ser" — near-black, clean */}
       <text
         x={TX}
         y={BASE}
         fontFamily="Sora, system-ui, sans-serif"
         fontWeight="500"
         fontSize={FONT}
-        fill="#4D314D"
+        fill="#1A1A1A"
         letterSpacing="-1.5"
       >
         ser
       </text>
 
-      {/* "o" — open ring, rotation fully via CSS animate-o-intro */}
+      {/* "o" — coral open ring, diameter matches x-height */}
       <circle
         id="o-ring"
         cx={CX}
@@ -105,7 +108,7 @@ export function Logo({
         />
       )}
 
-      {/* slot-tick glint at gap (1 o'clock) */}
+      {/* slot-tick glint at gap */}
       {animKey !== undefined && (
         <circle
           key={`glint-${animKey}`}

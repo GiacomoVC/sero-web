@@ -16,8 +16,8 @@ interface LogoMarkProps {
 
 export function LogoMark({ size = 32, className = '', animKey }: LogoMarkProps) {
   const c    = size / 2;
-  const r    = size * 0.36;
-  const sw   = size * 0.072;
+  const r    = size * 0.34;   // proportional to x-height match in Logo
+  const sw   = size * 0.065;
   const circ = 2 * Math.PI * r;
   const dash = circ * 0.922;
   const gap  = circ * 0.078;
