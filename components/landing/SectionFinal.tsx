@@ -22,7 +22,7 @@ export function SectionFinal() {
           La gente que buscas ya está buscándote.
         </h2>
         <p className="text-white/60 text-lg mt-6 leading-relaxed">
-          Sero conecta personas reales a través de lo que genuinamente aman.
+          Sero conecta personas a través de amigos y mundos compartidos.
         </p>
         <Link
           href="/quiz"

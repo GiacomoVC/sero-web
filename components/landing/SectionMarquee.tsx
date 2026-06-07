@@ -32,7 +32,7 @@ export function SectionMarquee() {
   return (
     <section className="bg-ink py-14 overflow-hidden">
       <h2 className="text-2xl sm:text-3xl font-black text-white text-center mb-10">
-        Ya está pasando.
+        Tus mundos ahora tienen un lugar.
       </h2>
 
       {/* Row 1 — forward */}
