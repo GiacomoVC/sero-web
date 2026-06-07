@@ -2,15 +2,15 @@ import Link from 'next/link';
 
 export function SectionFinal() {
   return (
-    <section className="relative bg-plum py-28 sm:py-40 px-6 text-center overflow-hidden">
+    <section className="relative bg-ink py-28 sm:py-40 px-6 text-center overflow-hidden">
       {/* Decorative blobs */}
       <div
         className="blob animate-blob w-[400px] h-[400px] -top-16 -left-20"
-        style={{ backgroundColor: 'rgba(255,107,94,0.20)' }}
+        style={{ backgroundColor: 'rgba(255,107,94,0.15)' }}
       />
       <div
         className="blob animate-blob-slow w-[360px] h-[360px] bottom-0 -right-16"
-        style={{ backgroundColor: 'rgba(255,138,61,0.20)' }}
+        style={{ backgroundColor: 'rgba(255,138,61,0.12)' }}
       />
 
       {/* Content */}
