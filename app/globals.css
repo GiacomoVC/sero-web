@@ -139,6 +139,30 @@ html, body {
   will-change: transform, opacity;
 }
 
+/* ── O intro: rotate from 7 o'clock → 1 o'clock, then shine 1 s ──────────── */
+@keyframes oRotateIn {
+  /* Gap starts at 7 o'clock (rotate +134°), arrives at 1 o'clock (rotate −46°) */
+  from { transform: rotate(134deg);  }
+  to   { transform: rotate(-46deg);  }
+}
+@keyframes oShineSettle {
+  0%   { filter: none; }
+  30%  { filter: drop-shadow(0 0 7px rgba(224,106,95,0.9))
+                 drop-shadow(0 0 16px rgba(224,106,95,0.35)); }
+  100% { filter: none; }
+}
+.animate-o-intro {
+  transform-box:    fill-box;
+  transform-origin: center;
+  /*
+    Phase 1 — 0.35 s delay, then 0.8 s rotation (ease-out deceleration)
+    Phase 2 — starts exactly when rotation ends, shines for 1 s then stops
+  */
+  animation:
+    oRotateIn    0.8s 0.35s cubic-bezier(.4, 0, .15, 1) both,
+    oShineSettle 1s   1.15s ease-in-out                 both;
+}
+
 /* O ring — SVG circle ripple (transform-box makes scale pivot from circle center) */
 @keyframes oRingSvg {
   0%   { opacity: 0;    transform: scale(0.88); }

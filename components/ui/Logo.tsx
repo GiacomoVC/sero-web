@@ -1,46 +1,49 @@
 'use client';
 
 /**
- * Sero wordmark — generated SVG, no external image.
+ * Sero wordmark — SVG, Opción A style.
+ * "ser" → Sora 600, plum #4D314D
+ * "o"  → open coral ring, gap at 1 o'clock
  *
- * "ser"  →  Sora 600, plum #4D314D
- * "o"    →  open coral ring (#E06A5F) with a ~28° gap at top-right
+ * On mount the O rotates in from 7 o'clock → 1 o'clock (0.8 s),
+ * then shines for exactly 1 s and stays.
  *
- * Pass `animKey` (e.g. animKey={i}) to trigger the O light-burst effect.
- * Each time animKey changes, the animation elements remount and replay.
- *
- * The <circle> id="o-ring" can be referenced as a standalone symbol anywhere.
+ * Pass `animKey` (changes each slot tick) to fire the ripple+glint burst.
  */
 
 interface LogoProps {
   width?: number;
   className?: string;
   priority?: boolean; // kept for call-site compat — unused in SVG
-  animKey?: number;   // triggers O animation on change
+  animKey?: number;   // triggers slot-tick burst on change
 }
 
-// ─── Geometry (all in SVG user units, viewBox 0 0 200 52) ───────────────────
-const VW = 200;         // viewBox width
-const VH = 52;          // viewBox height
-const FONT  = 44;       // "ser" font-size
-const BASE  = 42;       // text baseline y
-const TX    = 50;       // "ser" start x  — shift left/right to re-center if needed
-const CX    = 131;      // "o" center x   — adjust if "ser" is wider/narrower than estimated
-const CY    = 30;       // "o" center y   — baseline − x-height/2
-const R     = 12.5;     // "o" radius     ≈ Sora x-height / 2
-const SW    = 3;        // stroke width
-const CIRC  = 2 * Math.PI * R;
-const DASH  = CIRC * 0.922;   // arc length  (360° − 28° gap)
-const GAP   = CIRC * 0.078;   // gap length  (~28°, at top-right after rotate −100°)
-// ────────────────────────────────────────────────────────────────────────────
+// ─── Geometry (SVG user units, viewBox 0 0 200 52) ───────────────────────────
+const VW   = 200;
+const VH   = 52;
+const FONT = 44;        // "ser" font-size
+const BASE = 42;        // text baseline y
+const TX   = 50;        // "ser" start x
+const CX   = 131;       // "o" center x
+const CY   = 30;        // "o" center y  (baseline − x-height/2)
+const R    = 12.5;      // radius
+const SW   = 3.2;       // stroke width (slightly bolder than before)
+const CIRC = 2 * Math.PI * R;
+const DASH = CIRC * 0.922;   // arc  (≈ 332° drawn)
+const GAP  = CIRC * 0.078;   // gap  (≈  28° open, lands at 1 o'clock via CSS)
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function Logo({
-  width    = 220,
+  width     = 220,
   className = '',
-  priority : _p,   // unused
+  priority  : _p,
   animKey,
 }: LogoProps) {
   const height = Math.round(width * VH / VW);
+
+  // Glint lives near the gap — upper-right at ~1 o'clock
+  const glintCx = CX + R * 0.72;
+  const glintCy = CY - R * 0.72;
 
   return (
     <svg
@@ -48,12 +51,13 @@ export function Logo({
       height={height}
       viewBox={`0 0 ${VW} ${VH}`}
       fill="none"
+      overflow="visible"          // lets the shine drop-shadow breathe
       xmlns="http://www.w3.org/2000/svg"
       className={`block mx-auto ${className}`}
       aria-label="sero"
       role="img"
     >
-      {/* ── "ser" letters ──────────────────────────────────────────────── */}
+      {/* ── "ser" ─────────────────────────────────────────────────────────── */}
       <text
         x={TX}
         y={BASE}
@@ -66,7 +70,9 @@ export function Logo({
         ser
       </text>
 
-      {/* ── "o" — base open ring ────────────────────────────────────────── */}
+      {/* ── "o" base ring ─────────────────────────────────────────────────── */}
+      {/*   No SVG transform here — rotation is fully driven by CSS.          */}
+      {/*   animate-o-intro: rotates from 7 o'clock → 1 o'clock, then shines. */}
       <circle
         id="o-ring"
         cx={CX}
@@ -76,10 +82,10 @@ export function Logo({
         strokeWidth={SW}
         strokeDasharray={`${DASH} ${GAP}`}
         strokeLinecap="round"
-        transform={`rotate(-100, ${CX}, ${CY})`}
+        className="animate-o-intro"
       />
 
-      {/* ── Animation: ripple ring — remounts on each animKey change ───── */}
+      {/* ── Slot-tick ripple (remounts on each animKey change) ─────────────── */}
       {animKey !== undefined && (
         <circle
           key={`ring-${animKey}`}
@@ -87,17 +93,17 @@ export function Logo({
           cy={CY}
           r={R}
           stroke="rgba(224,106,95,0.7)"
-          strokeWidth={SW * 0.55}
+          strokeWidth={SW * 0.5}
           className="animate-o-ring-svg"
         />
       )}
 
-      {/* ── Animation: white glint at 135° (top-left arc) ─────────────── */}
+      {/* ── Slot-tick glint at the gap (1 o'clock area) ────────────────────── */}
       {animKey !== undefined && (
         <circle
           key={`glint-${animKey}`}
-          cx={CX - R * 0.7}
-          cy={CY - R * 0.7}
+          cx={glintCx}
+          cy={glintCy}
           r={SW * 1.1}
           fill="white"
           className="animate-o-glint-svg"
