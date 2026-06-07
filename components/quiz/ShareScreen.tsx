@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Logo } from '../ui/Logo';
 import type { SubmitResult } from '@/lib/types';
 
@@ -158,29 +158,64 @@ function StoryCard({
   );
 }
 
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+
+function canShareFiles(files: File[]): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare({ files })
+  );
+}
+
 /* ─── Main component ─────────────────────────────────────────────────────── */
 
 export function ShareScreen({
   result,
   firstName,
-  initialBlob: _initialBlob,
+  initialBlob,
 }: {
   result: SubmitResult;
   firstName: string;
   initialBlob?: File | null;
 }) {
-  const [copied, setCopied] = useState(false);
-  const [igTapped, setIgTapped] = useState(false);
+  const [copied, setCopied]   = useState(false);
+  const [waState, setWaState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [igState, setIgState] = useState<'idle' | 'loading' | 'done'>('idle');
+
+  // Image file — seeded from preloaded blob, fetched on demand if missing
+  const fileRef = useRef<File | null>(initialBlob ?? null);
+  const [fileReady, setFileReady] = useState(!!initialBlob);
 
   const shareUrl =
     typeof window !== 'undefined'
       ? `${window.location.origin}/${result.slug}`
       : result.url;
 
+  const storyUrl =
+    typeof window !== 'undefined'
+      ? result.igUrl.replace(/^https?:\/\/[^/]+/, window.location.origin)
+      : result.igUrl;
+
+  // Fetch story image in the background if it wasn't pre-loaded
+  useEffect(() => {
+    if (fileRef.current) return;
+    fetch(storyUrl)
+      .then((r) => r.blob())
+      .then((blob) => {
+        fileRef.current = new File([blob], `sero-story-${result.slug}.png`, { type: 'image/png' });
+        setFileReady(true);
+      })
+      .catch(() => setFileReady(false));
+  }, [storyUrl, result.slug]);
+
   // Pick the 2 most personal items from server-computed tags
-  const tags = (result.tags ?? []).filter(Boolean);
+  const tags  = (result.tags ?? []).filter(Boolean);
   const item1 = tags[0] ?? 'algo que amas';
   const item2 = tags[1] ?? null;
+
+  const waText = `Este es mi enlace de amigo en Sero: ${shareUrl}`;
 
   const copyLink = async () => {
     try {
@@ -190,20 +225,50 @@ export function ShareScreen({
     } catch { /* noop */ }
   };
 
-  const handleInstagram = async () => {
-    // Copy personal URL so user can paste it as a sticker
-    try { await navigator.clipboard.writeText(shareUrl); } catch { /* noop */ }
-    setIgTapped(true);
-    setTimeout(() => setIgTapped(false), 4000);
-    const ua = navigator.userAgent.toLowerCase();
-    if (/iphone|ipad|ipod/.test(ua)) {
-      window.location.href = 'instagram://camera';
-    } else {
-      window.open('https://www.instagram.com/', '_blank');
+  // WhatsApp: native share (image + text) → fallback to wa.me text link
+  const handleWhatsApp = async () => {
+    const file = fileRef.current;
+    if (file && canShareFiles([file])) {
+      setWaState('loading');
+      try {
+        await navigator.share({ files: [file], text: waText });
+        setWaState('done');
+        setTimeout(() => setWaState('idle'), 3000);
+        return;
+      } catch {
+        // User cancelled or share failed — fall through to text link
+      }
+      setWaState('idle');
     }
+    // Fallback: open WhatsApp with pre-filled text (no image)
+    window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
   };
 
-  const waText = `Este es mi enlace de amigo en Sero: ${shareUrl}`;
+  // Instagram: native share (image) → fallback to copy URL + instructions
+  const handleInstagram = async () => {
+    const file = fileRef.current;
+    if (file && canShareFiles([file])) {
+      setIgState('loading');
+      // Pre-copy URL so user can paste it as a story sticker right after sharing
+      navigator.clipboard.writeText(shareUrl).catch(() => {});
+      try {
+        await navigator.share({ files: [file] });
+        setIgState('done');
+        setTimeout(() => setIgState('idle'), 4000);
+        return;
+      } catch {
+        // User cancelled or not supported
+      }
+      setIgState('idle');
+      return;
+    }
+    // Fallback: copy URL + hint
+    navigator.clipboard.writeText(shareUrl).catch(() => {});
+    setIgState('done');
+    setTimeout(() => setIgState('idle'), 4000);
+  };
+
+  const imageLoading = !fileReady && !fileRef.current;
 
   return (
     <div className="min-h-[100svh] bg-ink flex flex-col items-center px-6 py-10">
@@ -249,31 +314,39 @@ export function ShareScreen({
       {/* Share buttons */}
       <div className="mt-4 w-full max-w-sm flex flex-col gap-3">
 
-        {/* WhatsApp */}
-        <a
-          href={`https://wa.me/?text=${encodeURIComponent(waText)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-bold text-white transition-opacity active:opacity-75"
+        {/* WhatsApp — native share with image, falls back to wa.me text */}
+        <button
+          onClick={handleWhatsApp}
+          disabled={waState === 'loading'}
+          className="flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-bold text-white transition-opacity active:opacity-75 disabled:opacity-60"
           style={{ backgroundColor: '#25D366' }}
         >
-          <IconWhatsApp />
-          Compartir por WhatsApp
-        </a>
-
-        {/* Instagram */}
-        <button
-          onClick={handleInstagram}
-          className="flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-bold text-white border border-white/15 transition-colors"
-          style={{ background: igTapped ? 'rgba(255,255,255,0.07)' : 'transparent' }}
-        >
-          <IconInstagram />
-          {igTapped ? 'Link copiado — pégalo como sticker ✓' : 'Compartir en Instagram'}
+          {waState === 'loading'
+            ? <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+            : <IconWhatsApp />}
+          {waState === 'done' ? 'Compartido ✓' : 'Compartir por WhatsApp'}
         </button>
 
-        {igTapped && (
+        {/* Instagram — native share with image, falls back to URL copy */}
+        <button
+          onClick={handleInstagram}
+          disabled={igState === 'loading'}
+          className="flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-bold text-white border border-white/15 transition-colors disabled:opacity-60"
+          style={{ background: igState === 'done' ? 'rgba(255,255,255,0.07)' : 'transparent' }}
+        >
+          {igState === 'loading'
+            ? <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+            : <IconInstagram />}
+          {igState === 'done'
+            ? 'Link copiado — pégalo como sticker ✓'
+            : imageLoading
+              ? 'Preparando imagen…'
+              : 'Compartir en Instagram'}
+        </button>
+
+        {igState === 'done' && (
           <p className="text-center text-white/35 text-xs -mt-1">
-            Abre Instagram stories y pega tu link como sticker 👆
+            Abre Instagram Stories y pega tu link como sticker 👆
           </p>
         )}
       </div>
