@@ -40,9 +40,9 @@ function emptyResponses(): QuizResponses {
     age: '',
     whatsapp: '',
     selectedWorlds: [],
-    diningStyle: 'depende',
+    diningStyle: 'hablar',
     dietary: 'ninguna',
-    expPreference: 'cualquiera',
+    expPreference: 'solo_amigos',
   };
 }
 
@@ -126,10 +126,10 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
         case 'peliculas':
           return !!(q.peliculas?.categories?.length);
         case 'anime':
-          // favorites es opcional
+          // favorites es opcional; preference defaults to 'ambos' (matches the UI default)
           return !!(
             q.anime?.categories?.length &&
-            q.anime?.preference &&
+            (q.anime?.preference ?? 'ambos') &&
             q.anime?.current?.trim()
           );
         case 'libros':
@@ -723,7 +723,6 @@ function ClosingStep({
   const diningOpts: { id: DiningStyle; label: string }[] = [
     { id: 'hablar', label: 'Hablar bastante' },
     { id: 'escuchar', label: 'Escuchar más' },
-    { id: 'depende', label: 'Depende de con quién' },
   ];
   const dietOpts: { id: Dietary; label: string }[] = [
     { id: 'ninguna', label: 'Ninguna' },
@@ -732,9 +731,8 @@ function ClosingStep({
     { id: 'alergia', label: 'Alergias' },
   ];
   const expOpts: { id: ExpPreference; label: string }[] = [
-    { id: 'solo_amigos', label: 'Solo con mis amigos' },
-    { id: 'plus_one', label: 'Normal si llevan un +1' },
-    { id: 'cualquiera', label: 'Cualquiera está bien' },
+    { id: 'solo_amigos', label: 'Sentarte con amigos de amigos' },
+    { id: 'plus_one', label: 'Amigos de amigos y llevar un +1' },
   ];
 
   return (
