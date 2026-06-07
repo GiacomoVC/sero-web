@@ -55,7 +55,7 @@ export function SectionMarquee() {
           {row2.map((item, idx) => (
             <span
               key={idx}
-              className="bg-coral/20 text-coral border border-coral/20 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap"
+              className="bg-plum/30 text-lilac border border-plum/25 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap"
             >
               {item}
             </span>
