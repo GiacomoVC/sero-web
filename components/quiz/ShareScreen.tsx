@@ -4,14 +4,6 @@ import { useRef, useState } from 'react';
 import { StoryCard, type StoryCardHandle } from './StoryCard';
 import type { SubmitResult } from '@/lib/types';
 
-function IconDownload() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0" aria-hidden>
-      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v7.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 11.586V4a1 1 0 011-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-    </svg>
-  );
-}
-
 export function ShareScreen({
   result,
   firstName,
@@ -21,8 +13,9 @@ export function ShareScreen({
   firstName: string;
   initialBlob?: File | null;
 }) {
-  const cardRef = useRef<StoryCardHandle>(null);
-  const [dlState, setDlState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const cardRef  = useRef<StoryCardHandle>(null);
+  const [state,  setState]  = useState<'idle' | 'recording' | 'done'>('idle');
+  const [pct,    setPct]    = useState(0);
 
   const shareUrl =
     typeof window !== 'undefined'
@@ -32,27 +25,46 @@ export function ShareScreen({
   const tags = (result.tags ?? []).filter(Boolean);
 
   const handleDownload = async () => {
-    if (dlState === 'loading') return;
-    setDlState('loading');
+    if (state !== 'idle') return;
+    setState('recording');
+    setPct(0);
 
-    // Copy URL to clipboard
-    try { await navigator.clipboard.writeText(shareUrl); } catch { /* noop */ }
+    // Progress counter — recording takes ~10.6 s
+    const start    = Date.now();
+    const interval = setInterval(() => {
+      setPct(Math.min(Math.round((Date.now() - start) / 10600 * 100), 99));
+    }, 200);
 
-    // Capture card as 1080×1920 PNG
     try {
-      const dataUrl = await cardRef.current?.capture();
-      if (dataUrl) {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `sero-${result.slug}.png`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }
-    } catch { /* noop */ }
+      // Copy URL to clipboard at the same moment
+      navigator.clipboard.writeText(shareUrl).catch(() => {});
 
-    setDlState('done');
-    setTimeout(() => setDlState('idle'), 3500);
+      const { url, ext } = await cardRef.current!.captureVideo();
+      clearInterval(interval);
+      setPct(100);
+
+      // Trigger browser download
+      const a = document.createElement('a');
+      a.href     = url;
+      a.download = `sero-${result.slug}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      setState('done');
+      setTimeout(() => { setState('idle'); setPct(0); }, 4000);
+    } catch {
+      clearInterval(interval);
+      setState('idle');
+      setPct(0);
+    }
+  };
+
+  const buttonLabel = () => {
+    if (state === 'done')      return 'Video descargado · link copiado ✓';
+    if (state === 'recording') return `Grabando tu video… ${pct}%`;
+    return 'Descargar video y copiar mi link';
   };
 
   return (
@@ -63,8 +75,8 @@ export function ShareScreen({
         ¡Listo, {firstName || 'amigo'}!
       </h1>
 
-      {/* Animated card */}
-      <div className="mt-8 shrink-0 rounded-3xl shadow-2xl overflow-hidden">
+      {/* Animated card preview */}
+      <div className="mt-8 shrink-0 shadow-2xl rounded-3xl overflow-hidden">
         <StoryCard
           ref={cardRef}
           firstName={firstName}
@@ -73,38 +85,47 @@ export function ShareScreen({
         />
       </div>
 
-      {/* Social proof nudge */}
+      {/* Nudge */}
       <p className="mt-6 text-white/60 text-sm text-center max-w-xs">
         Más amigos se suman, más rápido sale tu plan 🥂
       </p>
 
-      {/* Download + copy CTA */}
+      {/* Progress bar (only during recording) */}
+      {state === 'recording' && (
+        <div className="mt-4 w-full max-w-sm h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-coral rounded-full transition-all duration-200"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+
+      {/* Download CTA */}
       <button
         onClick={handleDownload}
-        disabled={dlState === 'loading'}
-        className="mt-4 btn-primary flex items-center gap-2.5 text-base disabled:opacity-70"
+        disabled={state === 'recording'}
+        className="mt-4 btn-primary flex items-center gap-2.5 text-base disabled:opacity-70 disabled:cursor-wait"
       >
-        {dlState === 'loading' ? (
+        {state === 'recording' ? (
           <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
         ) : (
-          <IconDownload />
+          <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0" aria-hidden>
+            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v7.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 11.586V4a1 1 0 011-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+          </svg>
         )}
-        {dlState === 'done'
-          ? 'Descargado · link copiado ✓'
-          : dlState === 'loading'
-          ? 'Preparando…'
-          : 'Descargar card y copiar mi link'}
+        {buttonLabel()}
       </button>
 
-      {/* Step instructions */}
-      <div className="mt-6 w-full max-w-sm space-y-2">
-        <p className="text-white/40 text-xs leading-relaxed">
-          <span className="text-white/25 mr-2">1</span>
-          Click arriba para descargar y auto-copiar tu link
+      {/* Instructions — same size as button text, encouraging */}
+      <div className="mt-6 w-full max-w-sm space-y-3">
+        <p className="text-white/70 text-base font-medium leading-snug">
+          1️⃣ &nbsp;Descarga y tu link se copia solo 🔗
         </p>
-        <p className="text-white/40 text-xs leading-relaxed">
-          <span className="text-white/25 mr-2">2</span>
-          Comparte tu card en stories con el link como sticker, o envíala por WhatsApp (no olvides pegar tu link)
+        <p className="text-white/70 text-base font-medium leading-snug">
+          2️⃣ &nbsp;Sube el video a tu story y pega tu link como sticker 📲
+        </p>
+        <p className="text-white/70 text-base font-medium leading-snug">
+          3️⃣ &nbsp;O envíalo por WhatsApp con tu link pegado 💬
         </p>
       </div>
 

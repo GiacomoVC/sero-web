@@ -1,416 +1,510 @@
 'use client';
 
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from 'react';
-import html2canvas from 'html2canvas';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
-// ─── Constants ──────────────────────────────────────────────────────────────
+// ─── Canvas resolution (displayed at 270×480, recorded at full res) ──────────
+const CW = 1080;
+const CH = 1920;
 
-// Card renders at 270×480 in the browser.
-// html2canvas scale=4 → 1080×1920 for download.
-const CARD_W = 270;
-const CARD_H = 480;
+// ─── O ring parameters (full canvas scale) ───────────────────────────────────
+const O_CX = CW / 2;
+const O_CY = 830;
+const O_R  = 210;
+const O_SW = 30;
+// Angles: 315° main arc | 18° gap1 | 15° detached | 12° gap2
+// In canvas convention (0 = 3 o'clock, clockwise positive):
+// Gap is at ~1 o'clock → rotation of -24° from start
+const O_START_DEG    = -24;
+const O_MAIN_DEG     = 315;
+const O_GAP1_DEG     = 18;
+const O_DETACH_DEG   = 15;
 
-// The O — proportions match the Logo component exactly
-const O_CX = CARD_W / 2;
-const O_CY = 204;
-const O_R  = 52;
-const O_SW = 7;
-const O_C  = 2 * Math.PI * O_R;
-// 315° main | 18° gap1 | 15° detached | 12° gap2
-const O_DA = [
-  (315 / 360) * O_C,
-  (18  / 360) * O_C,
-  (15  / 360) * O_C,
-  (12  / 360) * O_C,
-].join(' ');
+// ─── Easing & math helpers ───────────────────────────────────────────────────
+const deg   = (d: number) => (d * Math.PI) / 180;
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const il    = (a: number, b: number, v: number) => clamp((v - a) / (b - a), 0, 1); // invlerp
+const eoc   = (t: number) => 1 - Math.pow(1 - t, 3);           // ease-out cubic
+const eio   = (t: number) => t < 0.5 ? 2*t*t : 1-((-2*t+2)**2)/2; // ease-in-out
 
-// Sample chips to supplement user tags
-const SAMPLE_CHIPS: { emoji: string; label: string }[] = [
-  { emoji: '🎸', label: 'Arctic Monkeys' },
-  { emoji: '🏎', label: 'Fórmula 1' },
-  { emoji: '🎬', label: 'Interstellar' },
-  { emoji: '📚', label: 'Ciencia ficción' },
-  { emoji: '⚽', label: 'Champions' },
-  { emoji: '🍝', label: 'Italia' },
+// ─── Rounded rect helper ─────────────────────────────────────────────────────
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y,     x + w, y + r,     r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x,     y + h, x,     y + h - r, r);
+  ctx.lineTo(x,     y + r);
+  ctx.arcTo(x,     y,     x + r, y,         r);
+  ctx.closePath();
+}
+
+// ─── Fit text to a max pixel width (truncates with ellipsis) ─────────────────
+function fitText(ctx: CanvasRenderingContext2D, text: string, maxPx: number): string {
+  if (ctx.measureText(text).width <= maxPx) return text;
+  let s = text;
+  while (s.length > 0 && ctx.measureText(s + '…').width > maxPx) s = s.slice(0, -1);
+  return s + '…';
+}
+
+// ─── Draw the Sero O ring ────────────────────────────────────────────────────
+function drawO(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, r: number, sw: number,
+  progress: number, // 0→1 draw-in
+  alpha = 1,
+  glow  = false,
+) {
+  if (alpha <= 0 || progress <= 0) return;
+
+  const C    = 2 * Math.PI * r;
+  const mainLen   = (O_MAIN_DEG   / 360) * C;
+  const detachLen = (O_DETACH_DEG / 360) * C;
+  const totalDraw = mainLen + detachLen;
+  const drawn     = progress * totalDraw;
+
+  const a0 = deg(O_START_DEG);
+  const a1 = a0 + deg(O_MAIN_DEG);                    // end of main arc
+  const a2 = a1 + deg(O_GAP1_DEG);                    // start of detached
+  const a3 = a2 + deg(O_DETACH_DEG);                  // end of detached (unused but documented)
+  void a3;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (glow) {
+    ctx.shadowColor = 'rgba(255,107,94,0.45)';
+    ctx.shadowBlur  = 40;
+  }
+
+  const grad = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+  grad.addColorStop(0, '#FF6B5E');
+  grad.addColorStop(1, '#FF8A3D');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth   = sw;
+  ctx.lineCap     = 'round';
+
+  // Main arc
+  const mainDrawn = Math.min(drawn, mainLen);
+  if (mainDrawn > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, a0, a0 + (mainDrawn / C) * 2 * Math.PI, false);
+    ctx.stroke();
+  }
+
+  // Detached segment (only once main arc is fully drawn)
+  if (drawn > mainLen) {
+    const detachDrawn = Math.min(drawn - mainLen, detachLen);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, a2, a2 + (detachDrawn / C) * 2 * Math.PI, false);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// ─── Draw a text chip ────────────────────────────────────────────────────────
+// align: 'left' → x is left edge; 'right' → x is right edge
+function drawChip(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number,
+  text: string,
+  alpha   = 1,
+  align   : 'left' | 'right' = 'left',
+  maxText = 420,
+  fontSize = 40,
+) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = `600 ${fontSize}px Sora, sans-serif`;
+
+  const fitted = fitText(ctx, text, maxText);
+  const tw = ctx.measureText(fitted).width;
+  const padX = 36, padY = 22;
+  const chipW = tw + padX * 2;
+  const chipH = fontSize + padY * 2;
+  const r = chipH / 2;
+
+  const lx = align === 'left' ? x : x - chipW;
+  const ly = y - chipH / 2;
+
+  // Shadow
+  ctx.shadowColor  = 'rgba(0,0,0,0.07)';
+  ctx.shadowBlur   = 12;
+  ctx.shadowOffsetY = 3;
+  ctx.fillStyle = 'white';
+  roundRect(ctx, lx, ly, chipW, chipH, r);
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+
+  // Border
+  ctx.strokeStyle = 'rgba(24,24,27,0.09)';
+  ctx.lineWidth = 2;
+  roundRect(ctx, lx, ly, chipW, chipH, r);
+  ctx.stroke();
+
+  // Text
+  ctx.fillStyle   = '#18181B';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign   = 'left';
+  ctx.fillText(fitted, lx + padX, y);
+
+  ctx.restore();
+}
+
+// ─── Draw background + blobs ─────────────────────────────────────────────────
+function drawBg(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = '#FAF8F5';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Coral blob top-right
+  const g1 = ctx.createRadialGradient(CW - 120, -120, 0, CW - 120, -120, 680);
+  g1.addColorStop(0, 'rgba(255,107,94,0.24)');
+  g1.addColorStop(1, 'rgba(255,107,94,0)');
+  ctx.fillStyle = g1;
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Plum blob bottom-left
+  const g2 = ctx.createRadialGradient(0, CH, 0, 0, CH, 580);
+  g2.addColorStop(0, 'rgba(91,45,130,0.15)');
+  g2.addColorStop(1, 'rgba(91,45,130,0)');
+  ctx.fillStyle = g2;
+  ctx.fillRect(0, 0, CW, CH);
+}
+
+// ─── Chip tracks for the floating-chip phase ─────────────────────────────────
+const TRACKS = [
+  { startX: -460, yFrac: 0.24, dir:  1, delay: 0.00, dur: 2.8 },
+  { startX: CW+60, yFrac: 0.37, dir: -1, delay: 0.30, dur: 2.7 },
+  { startX: -460, yFrac: 0.52, dir:  1, delay: 0.60, dur: 3.0 },
+  { startX: CW+60, yFrac: 0.64, dir: -1, delay: 0.15, dur: 2.9 },
+  { startX: -460, yFrac: 0.76, dir:  1, delay: 0.45, dur: 2.6 },
+  { startX: CW+60, yFrac: 0.43, dir: -1, delay: 0.75, dur: 3.1 },
 ];
 
-// Six chip tracks: y-% of card height, direction (+1 = L→R), delay, duration
-const CHIP_TRACKS = [
-  { y: 24,  dir:  1, delay: 0.00, dur: 3.0 },
-  { y: 37,  dir: -1, delay: 0.35, dur: 2.7 },
-  { y: 52,  dir:  1, delay: 0.65, dur: 3.2 },
-  { y: 64,  dir: -1, delay: 0.15, dur: 2.9 },
-  { y: 77,  dir:  1, delay: 0.50, dur: 2.6 },
-  { y: 44,  dir: -1, delay: 0.80, dur: 3.1 },
-];
+// Fallback labels used if user didn't fill in a world
+const FALLBACK = ['música', 'series', 'Fórmula 1', 'Murakami', 'películas', 'viajes'];
 
-// Constellation: four interest chips orbiting the O
-const ORBIT_ANCHORS = [
-  { x: 12,  y: 108, ix: -36, iy: -20 },  // top-left
-  { x: 158, y:  96, ix:  36, iy: -20 },  // top-right
-  { x: 10,  y: 286, ix: -36, iy:  20 },  // bottom-left
-  { x: 154, y: 274, ix:  36, iy:  20 },  // bottom-right
-];
+// ─── Sero wordmark at a given center-Y baseline ──────────────────────────────
+function drawWordmark(
+  ctx: CanvasRenderingContext2D,
+  baselineY: number,
+  alpha: number,
+  oGlow = false,
+) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
 
-// ─── Animation phases ────────────────────────────────────────────────────────
-//
-//  0 → intro title + floating chips (0 – 1.0 s)
-//  1 → O draws in, chips clear         (1.0 – 1.8 s)
-//  2 → O + constellation               (1.8 – 4.5 s)
-//  3 → sero wordmark emerges           (4.5 – 6.0 s)
-//  4 → question text                   (6.0 – 7.8 s)
-//  5 → final frame (hold)              (7.8 s →)
+  const fSize  = 168;
+  ctx.font     = `500 ${fSize}px Sora, sans-serif`;
+  ctx.fillStyle = '#18181B';
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign    = 'left';
 
-type Phase = 0 | 1 | 2 | 3 | 4 | 5;
+  const serW   = ctx.measureText('ser').width;
+  const oR     = 40;
+  const oSW    = 10;
+  const gap    = 12;    // pixel gap between 'r' end and O left edge
+  const totalW = serW + gap + oR * 2;
+  const startX = (CW - totalW) / 2;
 
-// ─── Public handle ───────────────────────────────────────────────────────────
+  ctx.fillText('ser', startX, baselineY);
 
+  const oCX = startX + serW + gap + oR;
+  // Cap-height midpoint ≈ 0.36 × fontSize above baseline for Sora
+  const oCY = baselineY - fSize * 0.36;
+  drawO(ctx, oCX, oCY, oR, oSW, 1, 1, oGlow);
+
+  ctx.restore();
+}
+
+// ─── Public handle type ───────────────────────────────────────────────────────
 export interface StoryCardHandle {
-  /** Jump to final frame and return a PNG data-URL at 1080×1920. */
-  capture(): Promise<string>;
+  captureVideo(): Promise<{ url: string; ext: string }>;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
-
 export const StoryCard = forwardRef<
   StoryCardHandle,
   { firstName: string; tags: string[]; shareUrl: string }
 >(function StoryCard({ firstName, tags, shareUrl }, ref) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [phase, setPhase] = useState<Phase>(0);
-  const [oDrawn, setODrawn] = useState(false); // keeps O visible after draw-in
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef<number>();
+  const startRef  = useRef<number>(0);
 
-  // ── Animation timeline ──
+  // Resolved chip labels (user tags + fallback)
+  const labels = [
+    ...tags.filter(Boolean).slice(0, 6),
+    ...FALLBACK,
+  ].slice(0, 6);
+
+  // Constellation anchors — well outside the O ring (r=210 → spans x 330–750)
+  // Left chips anchor at x=60 (left edge), right chips anchor at x=1020 (right edge)
+  const constItems = [
+    { label: labels[0], x: 60,   y: O_CY - 340, align: 'left'  as const },
+    { label: labels[1], x: 1020, y: O_CY - 320, align: 'right' as const },
+    { label: labels[2], x: 60,   y: O_CY + 320, align: 'left'  as const },
+    { label: labels[3], x: 1020, y: O_CY + 340, align: 'right' as const },
+  ];
+
+  // ── Master drawFrame (all phases) ──────────────────────────────────────────
+  const drawFrameRef = useRef<(ctx: CanvasRenderingContext2D, t: number) => void>(
+    () => {}
+  );
+
   useEffect(() => {
-    const t: ReturnType<typeof setTimeout>[] = [
-      setTimeout(() => { setPhase(1); setODrawn(true); }, 1000),
-      setTimeout(() => setPhase(2), 1800),
-      setTimeout(() => setPhase(3), 4500),
-      setTimeout(() => setPhase(4), 6000),
-      setTimeout(() => setPhase(5), 7800),
-    ];
-    return () => t.forEach(clearTimeout);
+    drawFrameRef.current = (ctx: CanvasRenderingContext2D, t: number) => {
+      ctx.clearRect(0, 0, CW, CH);
+      drawBg(ctx);
+
+      // ── PHASE 0 (0 – 1.0 s): title + floating chips ───────────────────────
+      if (t < 1.0) {
+        const ta = eoc(il(0, 0.4, t));
+        ctx.save();
+        ctx.globalAlpha = ta;
+        ctx.textBaseline = 'top';
+
+        // Overline "sero"
+        ctx.font      = '700 48px Sora, sans-serif';
+        ctx.fillStyle = '#8F8F98';
+        ctx.textAlign = 'left';
+        ctx.fillText('sero', 96, 180);
+
+        // "Los planes que amaría [name] son…"
+        const fSize = 96;
+        ctx.font = `800 ${fSize}px Sora, sans-serif`;
+        ctx.fillStyle = '#18181B';
+        ctx.fillText('Los planes que', 96, 272);
+        ctx.fillText('amaría', 96, 272 + 120);
+
+        // name in coral — fitted
+        const prefix   = 'amaría ';
+        const prefixW  = ctx.measureText(prefix).width;
+        const maxNameW = CW - 96 - prefixW - 96;
+        const fittedName = fitText(ctx, firstName || 'tú', maxNameW);
+        ctx.fillStyle = '#FF6B5E';
+        ctx.fillText(fittedName, 96 + prefixW, 272 + 120);
+
+        ctx.fillStyle = '#18181B';
+        ctx.fillText('son…', 96, 272 + 120 * 2);
+        ctx.restore();
+
+        // Floating chips
+        TRACKS.forEach((tr, i) => {
+          const lbl  = labels[i % labels.length] ?? '';
+          const lT   = t - tr.delay;
+          if (lT <= 0 || lT >= tr.dur) return;
+          const prog = lT / tr.dur;
+          const fa   = prog < 0.1 ? prog / 0.1 : prog > 0.85 ? 1 - (prog - 0.85) / 0.15 : 1;
+          const dist = CW + 520;
+          const cx2  = tr.startX + tr.dir * dist * prog;
+          drawChip(ctx, cx2, CH * tr.yFrac, lbl, fa * ta, 'left', 440, 44);
+        });
+      }
+
+      // ── PHASE 1 (1.0 – 1.8 s): O draws in (title fades) ──────────────────
+      if (t >= 1.0 && t < 1.8) {
+        // Title fade-out
+        const titleA = 1 - eoc(il(1.0, 1.35, t));
+        if (titleA > 0.01) {
+          ctx.save();
+          ctx.globalAlpha = titleA;
+          ctx.font = `800 96px Sora, sans-serif`;
+          ctx.fillStyle = '#18181B';
+          ctx.textBaseline = 'top';
+          ctx.textAlign = 'left';
+          ctx.fillText('Los planes que', 96, 272);
+          ctx.fillText('amaría', 96, 272 + 120);
+          const prefix  = 'amaría ';
+          const pw      = ctx.measureText(prefix).width;
+          const fn      = fitText(ctx, firstName || 'tú', CW - 96 - pw - 96);
+          ctx.fillStyle = '#FF6B5E';
+          ctx.fillText(fn, 96 + pw, 272 + 120);
+          ctx.fillStyle = '#18181B';
+          ctx.fillText('son…', 96, 272 + 120 * 2);
+          ctx.restore();
+        }
+        // O drawing in
+        const op = eio(il(1.0, 1.8, t));
+        drawO(ctx, O_CX, O_CY, O_R, O_SW, op);
+      }
+
+      // ── PHASE 2 (1.8 – 4.2 s): O + constellation ─────────────────────────
+      if (t >= 1.8 && t < 4.2) {
+        drawO(ctx, O_CX, O_CY, O_R, O_SW, 1, 1, true);
+
+        constItems.forEach((item, i) => {
+          const enter = 1.8 + i * 0.28;
+          const a = eoc(il(enter, enter + 0.5, t));
+          const ox = (1 - eoc(il(enter, enter + 0.5, t))) * (item.align === 'left' ? -80 : 80);
+          drawChip(
+            ctx,
+            item.x + ox,
+            item.y,
+            item.label,
+            a,
+            item.align,
+            280,  // max text width — tight so chips stay outside the O ring
+            40,
+          );
+        });
+      }
+
+      // ── PHASE 3a (4.2 – 5.0 s): constellation + O fade out ───────────────
+      if (t >= 4.2 && t < 5.0) {
+        const fadeOut = 1 - eoc(il(4.2, 5.0, t));
+
+        // O ring fades
+        drawO(ctx, O_CX, O_CY, O_R, O_SW, 1, fadeOut, t < 4.7);
+
+        // Constellation chips fade with O
+        constItems.forEach((item) => {
+          drawChip(ctx, item.x, item.y, item.label, fadeOut, item.align, 280, 40);
+        });
+      }
+
+      // ── PHASE 3b (5.0 – 6.0 s): sero wordmark emerges ───────────────────
+      if (t >= 5.0 && t < 6.0) {
+        const logoA = eoc(il(5.0, 5.6, t));
+        const logoY = CH * 0.64 + (1 - eoc(il(5.0, 5.6, t))) * 100;
+        drawWordmark(ctx, logoY, logoA);
+      }
+
+      // ── PHASE 4 (6.0 – 7.8 s): question text ─────────────────────────────
+      if (t >= 6.0 && t < 7.8) {
+        drawWordmark(ctx, CH * 0.64, 1);
+
+        const qA = eoc(il(6.0, 6.5, t));
+        if (qA > 0) {
+          ctx.save();
+          ctx.globalAlpha = qA;
+          ctx.font = '800 80px Sora, sans-serif';
+          ctx.fillStyle = '#18181B';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText('¿Qué tendría', CW / 2, CH * 0.72);
+          ctx.fillText('tu plan perfecto?', CW / 2, CH * 0.72 + 104);
+          ctx.restore();
+        }
+      }
+
+      // ── PHASE 5 (7.8 s +): final frame ────────────────────────────────────
+      if (t >= 7.8) {
+        // Wordmark slides up to center
+        const slideP  = eio(il(7.8, 8.4, t));
+        const logoY   = CH * 0.64 - slideP * (CH * 0.64 - CH * 0.44);
+        const oGlow   = t > 8.2;
+        drawWordmark(ctx, logoY, 1, oGlow);
+
+        // Tagline fades in below logo
+        const tagA = eoc(il(8.1, 8.6, t));
+        if (tagA > 0) {
+          ctx.save();
+          ctx.globalAlpha = tagA;
+          ctx.font = '700 60px Sora, sans-serif';
+          ctx.fillStyle = '#18181B';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText('Mismos gustos, mejores planes', CW / 2, CH * 0.55);
+          ctx.restore();
+        }
+
+        // URL pill
+        const urlA = eoc(il(8.4, 8.9, t));
+        if (urlA > 0) {
+          ctx.save();
+          ctx.globalAlpha = urlA;
+          const short   = shareUrl.replace(/^https?:\/\//, '');
+          const urlFont = '500 36px Sora, sans-serif';
+          ctx.font      = urlFont;
+          const maxUW   = CW - 200;
+          const fitted  = fitText(ctx, short, maxUW);
+          const tw      = ctx.measureText(fitted).width;
+          const pH = 72, pPad = 60;
+          const pW = tw + pPad * 2;
+          const pX = (CW - pW) / 2;
+          const pY = CH * 0.63;
+
+          ctx.fillStyle = 'rgba(24,24,27,0.07)';
+          roundRect(ctx, pX, pY, pW, pH, pH / 2);
+          ctx.fill();
+
+          ctx.fillStyle   = 'rgba(24,24,27,0.45)';
+          ctx.textAlign   = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(fitted, CW / 2, pY + pH / 2);
+          ctx.restore();
+        }
+      }
+    };
+  }, [firstName, tags, shareUrl, labels, constItems]);
+
+  // ── Animation loop ─────────────────────────────────────────────────────────
+  function startAnim(canvas: HTMLCanvasElement) {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const ctx = canvas.getContext('2d')!;
+    startRef.current = performance.now();
+
+    const loop = () => {
+      const t = (performance.now() - startRef.current) / 1000;
+      drawFrameRef.current(ctx, Math.min(t, 10.5));
+      if (t < 10.5) rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    document.fonts.ready.then(() => startAnim(canvas));
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Expose capture() ──
+  // ── Expose capture method ──────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
-    async capture() {
-      setPhase(5); // jump to final frame
-      await new Promise((r) => setTimeout(r, 120)); // let React paint
-      const el = containerRef.current;
-      if (!el) return '';
-      const canvas = await html2canvas(el, {
-        scale: 4,           // 270×4 = 1080, 480×4 = 1920
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#FAF8F5',
-        logging: false,
+    captureVideo() {
+      const canvas = canvasRef.current;
+      if (!canvas) return Promise.resolve({ url: '', ext: 'webm' });
+
+      const mimeType = MediaRecorder.isTypeSupported('video/mp4')
+        ? 'video/mp4'
+        : MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+          ? 'video/webm;codecs=vp9'
+          : 'video/webm';
+      const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
+
+      return new Promise<{ url: string; ext: string }>((resolve) => {
+        const stream   = canvas.captureStream(30);
+        const recorder = new MediaRecorder(stream, { mimeType });
+        const chunks: Blob[] = [];
+
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
+          resolve({ url: URL.createObjectURL(blob), ext });
+        };
+
+        // Re-run animation from scratch and record it
+        startAnim(canvas);
+        recorder.start(100);
+        setTimeout(() => recorder.stop(), 10600);
       });
-      return canvas.toDataURL('image/png');
     },
   }));
 
-  // ── Derived display values ──
-  const chips = [
-    ...tags.slice(0, 4).map((t, i) => ({
-      emoji: SAMPLE_CHIPS[i]?.emoji ?? '✨',
-      label: t,
-    })),
-    ...SAMPLE_CHIPS.slice(Math.min(tags.length, 4)),
-  ].slice(0, 6);
-
-  const constellation = ORBIT_ANCHORS.map((anchor, i) => ({
-    ...anchor,
-    label: tags[i] ?? SAMPLE_CHIPS[i]?.label ?? '…',
-  }));
-
-  const shortUrl = shareUrl.replace(/^https?:\/\//, '');
-
-  // ── Helpers ──
-  const vis = (...phases: Phase[]) =>
-    ({ opacity: phases.includes(phase) ? 1 : 0 } as React.CSSProperties);
-
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'relative',
-        width:    CARD_W,
-        height:   CARD_H,
-        background: '#FAF8F5',
-        borderRadius: 24,
-        overflow: 'hidden',
-        fontFamily: 'var(--font-sora, Sora, sans-serif)',
-        WebkitFontSmoothing: 'antialiased',
-        userSelect: 'none',
-      }}
-    >
-      {/* ── Background blobs (always visible) ── */}
-      <div style={{
-        position: 'absolute', width: 200, height: 200,
-        borderRadius: '50%', top: -60, right: -60,
-        background: 'radial-gradient(circle, rgba(255,107,94,0.22), transparent 70%)',
-        pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'absolute', width: 160, height: 160,
-        borderRadius: '50%', bottom: -30, left: -40,
-        background: 'radial-gradient(circle, rgba(91,45,130,0.14), transparent 70%)',
-        pointerEvents: 'none',
-      }} />
-
-      {/* ── PHASE 0–1: Intro title ── */}
-      <div style={{
-        position: 'absolute', top: 32, left: 24, right: 24,
-        opacity: phase >= 2 ? 0 : 1,
-        transform: phase >= 2 ? 'translateY(-10px)' : 'translateY(0)',
-        transition: 'opacity 0.35s ease, transform 0.35s ease',
-        pointerEvents: 'none',
-      }}>
-        <p style={{
-          fontSize: 9, fontWeight: 700, letterSpacing: '0.22em',
-          color: '#8F8F98', textTransform: 'uppercase', marginBottom: 12,
-        }}>
-          sero
-        </p>
-        <p style={{
-          fontSize: 20, fontWeight: 800, color: '#18181B',
-          lineHeight: 1.2, letterSpacing: '-0.025em',
-        }}>
-          Los planes que
-        </p>
-        <p style={{
-          fontSize: 20, fontWeight: 800, lineHeight: 1.2,
-          letterSpacing: '-0.025em',
-        }}>
-          amaría{' '}
-          <span style={{ color: '#FF6B5E' }}>{firstName}</span>
-        </p>
-        <p style={{
-          fontSize: 20, fontWeight: 800, color: '#18181B',
-          lineHeight: 1.2, letterSpacing: '-0.025em',
-        }}>
-          son…
-        </p>
-      </div>
-
-      {/* ── PHASE 0–1: Floating chips ── */}
-      {phase <= 1 && CHIP_TRACKS.map((track, i) => {
-        const chip = chips[i % chips.length];
-        const startLeft = track.dir === 1 ? -130 : CARD_W + 10;
-        const dx = track.dir === 1 ? CARD_W + 260 : -(CARD_W + 260);
-        return (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: startLeft,
-              top: `${track.y}%`,
-              pointerEvents: 'none',
-              animation: `scChipMove ${track.dur}s ${track.delay}s linear both`,
-              '--chip-dx': `${dx}px`,
-            } as React.CSSProperties}
-          >
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              background: 'white', borderRadius: 100,
-              padding: '4px 11px',
-              border: '1px solid rgba(24,24,27,0.08)',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-              fontSize: 10, fontWeight: 600, color: '#18181B',
-              whiteSpace: 'nowrap',
-            }}>
-              <span>{chip?.emoji}</span>
-              <span>{chip?.label}</span>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* ── PHASE 1+: The O ── */}
-      {(phase >= 1 || oDrawn) && (
-        <div style={{
-          position: 'absolute',
-          left: O_CX - O_R - O_SW - 2,
-          top:  O_CY - O_R - O_SW - 2,
-          opacity: phase >= 3 && phase <= 5 ? 0 : 1, // hides during sero logo phase
-          transition: 'opacity 0.5s ease',
-          pointerEvents: 'none',
-        }}>
-          <svg
-            width={(O_R + O_SW + 2) * 2}
-            height={(O_R + O_SW + 2) * 2}
-          >
-            <defs>
-              <linearGradient id="sc-ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#FF6B5E" />
-                <stop offset="100%" stopColor="#FF8A3D" />
-              </linearGradient>
-              <filter id="sc-ring-glow">
-                <feGaussianBlur stdDeviation="3" result="blur" />
-                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-              </filter>
-            </defs>
-            <circle
-              cx={O_R + O_SW + 2}
-              cy={O_R + O_SW + 2}
-              r={O_R}
-              fill="none"
-              stroke="url(#sc-ring-grad)"
-              strokeWidth={O_SW}
-              strokeDasharray={O_DA}
-              strokeLinecap="round"
-              style={{
-                transformBox: 'fill-box',
-                transformOrigin: 'center',
-                // Phase 1: draw in. Phase 2+: hold drawn position with subtle breathe
-                animation: phase === 1
-                  ? `scDrawO 0.75s cubic-bezier(.4,0,.15,1) forwards`
-                  : `scBreathe 3.5s ease-in-out infinite`,
-                transform: 'rotate(-24deg)',
-                filter: phase >= 2 ? 'drop-shadow(0 0 5px rgba(255,107,94,0.4))' : 'none',
-                transition: 'filter 1s ease',
-              }}
-            />
-          </svg>
-        </div>
-      )}
-
-      {/* ── PHASE 2–3: Constellation ── */}
-      {constellation.map((item, i) => (
-        <div
-          key={i}
-          style={{
-            position: 'absolute',
-            left: item.x,
-            top:  item.y,
-            opacity: phase === 2 || phase === 3 ? 1 : 0,
-            transform: phase === 2 || phase === 3
-              ? 'translate(0,0) scale(1)'
-              : `translate(${item.ix}px,${item.iy}px) scale(0.82)`,
-            transition: `opacity 0.45s ${i * 0.13}s ease, transform 0.45s ${i * 0.13}s cubic-bezier(.2,.9,.3,1)`,
-            pointerEvents: 'none',
-          }}
-        >
-          <div style={{
-            background: 'white', borderRadius: 100,
-            padding: '5px 11px',
-            border: '1px solid rgba(24,24,27,0.08)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-            fontSize: 10, fontWeight: 700, color: '#18181B',
-            maxWidth: 104, whiteSpace: 'nowrap',
-            overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            {item.label}
-          </div>
-        </div>
-      ))}
-
-      {/* ── PHASE 3+: Sero wordmark — slides up to center for final ── */}
-      <div style={{
-        position: 'absolute',
-        left: 0, right: 0,
-        top: phase >= 5 ? 148 : 316,
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        opacity: phase >= 3 ? 1 : 0,
-        transition: 'opacity 0.4s ease, top 0.9s cubic-bezier(.4,0,.15,1)',
-        pointerEvents: 'none',
-      }}>
-        <svg width={110} height={30} viewBox="0 0 170 46">
-          <defs>
-            <linearGradient id="sc-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FF6B5E" />
-              <stop offset="100%" stopColor="#FF8A3D" />
-            </linearGradient>
-          </defs>
-          <text
-            x="44" y="40"
-            fontFamily="Sora, sans-serif"
-            fontSize="42" fontWeight="500"
-            fill="#18181B"
-            textAnchor="end"
-            letterSpacing="-1"
-          >
-            ser
-          </text>
-          <circle
-            cx="114" cy="29" r="10.5"
-            fill="none"
-            stroke="url(#sc-logo-grad)"
-            strokeWidth="2.6"
-            strokeDasharray="57.72 3.30 2.75 2.20"
-            strokeLinecap="round"
-            style={{
-              transformBox: 'fill-box',
-              transformOrigin: 'center',
-              transform: 'rotate(-24deg)',
-              animation: phase >= 5 ? 'scBreathe 4s ease-in-out infinite' : 'none',
-            }}
-          />
-        </svg>
-      </div>
-
-      {/* ── PHASE 4: Question text ── */}
-      <div style={{
-        position: 'absolute',
-        bottom: 108,
-        left: 24, right: 24,
-        textAlign: 'center',
-        opacity: phase === 4 ? 1 : 0,
-        transform: phase === 4 ? 'translateY(0)' : 'translateY(10px)',
-        transition: 'opacity 0.5s ease, transform 0.5s ease',
-        pointerEvents: 'none',
-      }}>
-        <p style={{ fontSize: 17, fontWeight: 800, color: '#18181B', lineHeight: 1.25, letterSpacing: '-0.025em' }}>
-          ¿Qué tendría
-        </p>
-        <p style={{ fontSize: 17, fontWeight: 800, color: '#18181B', lineHeight: 1.25, letterSpacing: '-0.025em' }}>
-          tu plan perfecto?
-        </p>
-      </div>
-
-      {/* ── PHASE 5: Final tagline ── */}
-      <div style={{
-        position: 'absolute',
-        bottom: 62,
-        left: 24, right: 24,
-        textAlign: 'center',
-        opacity: phase >= 5 ? 1 : 0,
-        transform: phase >= 5 ? 'translateY(0)' : 'translateY(14px)',
-        transition: 'opacity 0.6s ease, transform 0.6s ease',
-        pointerEvents: 'none',
-      }}>
-        <p style={{ fontSize: 14, fontWeight: 700, color: '#18181B', lineHeight: 1.3, letterSpacing: '-0.015em' }}>
-          Mismos gustos, mejores planes
-        </p>
-      </div>
-
-      {/* ── PHASE 5: Personal URL ── */}
-      <div style={{
-        position: 'absolute',
-        bottom: 20,
-        left: 24, right: 24,
-        opacity: phase >= 5 ? 1 : 0,
-        transition: 'opacity 0.6s 0.25s ease',
-        pointerEvents: 'none',
-      }}>
-        <div style={{
-          background: 'rgba(24,24,27,0.06)',
-          borderRadius: 10,
-          padding: '4px 10px',
-          textAlign: 'center',
-        }}>
-          <p style={{ fontSize: 9, fontWeight: 600, color: 'rgba(24,24,27,0.45)', letterSpacing: '0.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {shortUrl}
-          </p>
-        </div>
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      width={CW}
+      height={CH}
+      style={{ width: 270, height: 480, borderRadius: 24, display: 'block' }}
+    />
   );
 });
