@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
 
 const ROTATION = [
@@ -59,7 +60,7 @@ export function SectionHero() {
 
         {/* Headline + slot machine */}
         <h1 className="mt-12">
-          <span className="block text-5xl sm:text-7xl font-black tracking-tight text-ink leading-[1.05]">
+          <span className="block text-4xl sm:text-6xl font-black tracking-tight text-ink leading-[1.05]">
             Piensa en algo que amas.
           </span>
 
@@ -74,10 +75,16 @@ export function SectionHero() {
           </div>
         </h1>
 
-        {/* Sub */}
-        <p className="mt-6 text-lg sm:text-xl text-ink/55 max-w-md mx-auto leading-relaxed">
-          y conviértelo en experiencias con amigos.
+        {/* Sub + CTA */}
+        <p className="mt-6 text-lg sm:text-xl font-bold text-ink/70 max-w-md mx-auto leading-relaxed">
+          ¿Cuándo fue la última vez que eso se convirtió en un plan?
         </p>
+        <Link
+          href="/quiz"
+          className="btn-primary text-base mt-6 inline-flex"
+        >
+          Convertirlo en un plan →
+        </Link>
 
         {/* Floating interest tags */}
         <div className="mt-12 flex flex-wrap gap-3 justify-center max-w-2xl mx-auto">
