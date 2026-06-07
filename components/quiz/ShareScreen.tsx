@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Logo } from '../ui/Logo';
-import { buildWhatsAppMessage, whatsappShareUrl } from '@/lib/whatsapp';
 import type { SubmitResult } from '@/lib/types';
+
+/* ─── Icons ──────────────────────────────────────────────────────────────── */
 
 function IconWhatsApp() {
   return (
@@ -32,56 +33,154 @@ function IconInstagram() {
   );
 }
 
+/* ─── Story card (9:16 preview) ──────────────────────────────────────────── */
+
+function StoryCard({
+  firstName,
+  item1,
+  item2,
+  shareUrl,
+}: {
+  firstName: string;
+  item1: string;
+  item2: string | null;
+  shareUrl: string;
+}) {
+  const shortUrl = shareUrl.replace(/^https?:\/\//, '');
+
+  return (
+    <div
+      className="relative w-full h-full rounded-[28px] overflow-hidden flex flex-col select-none shadow-2xl"
+      style={{ background: '#FAF8F5' }}
+    >
+      {/* Decorative blobs */}
+      <div
+        className="absolute -top-10 -right-10 w-40 h-40 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(255,107,94,0.35), rgba(255,138,61,0.15))', filter: 'blur(1px)' }}
+      />
+      <div
+        className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(91,45,130,0.20), rgba(255,107,94,0.08))' }}
+      />
+
+      {/* Top bar */}
+      <div className="relative z-10 pt-5 px-5 flex items-center justify-between">
+        <span className="text-[10px] font-black tracking-[0.25em] text-ink/50 uppercase">
+          sero
+        </span>
+        {/* Standalone O ring */}
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+          <defs>
+            <linearGradient id="card-o-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FF6B5E" />
+              <stop offset="100%" stopColor="#FF8A3D" />
+            </linearGradient>
+          </defs>
+          <circle
+            cx="8" cy="8" r="5.5"
+            fill="none"
+            stroke="url(#card-o-grad)"
+            strokeWidth="1.8"
+            strokeDasharray="30.0 1.9 1.6 1.1"
+            style={{
+              transform: 'rotate(-24deg)',
+              transformBox: 'fill-box',
+              transformOrigin: 'center',
+            }}
+          />
+        </svg>
+      </div>
+
+      {/* Main content */}
+      <div className="relative z-10 flex-1 flex flex-col justify-center px-5 pb-2">
+        {/* Name */}
+        <p className="text-[9px] font-bold tracking-[0.2em] text-ink/35 uppercase mb-4">
+          el mundo de {firstName || 'alguien especial'}
+        </p>
+
+        {/* Label */}
+        <p className="text-[11px] font-semibold text-ink/50 mb-2">
+          Mi plan ideal:
+        </p>
+
+        {/* Items */}
+        <div className="space-y-2.5">
+          <div className="flex items-start gap-2">
+            <span
+              className="mt-0.5 w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: '#FF6B5E', marginTop: '5px' }}
+            />
+            <span className="text-ink font-bold text-sm leading-snug">{item1}</span>
+          </div>
+
+          {item2 && (
+            <div className="flex items-start gap-2">
+              <span
+                className="mt-0.5 w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: '#FF8A3D', marginTop: '5px' }}
+              />
+              <span className="text-ink font-bold text-sm leading-snug">{item2}</span>
+            </div>
+          )}
+
+          <div className="flex items-start gap-2">
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0 border border-ink/20"
+              style={{ marginTop: '5px' }}
+            />
+            <span className="text-ink/35 text-sm italic leading-snug">y mucho más…</span>
+          </div>
+        </div>
+
+        {/* CTA line */}
+        <div className="mt-5 pt-4 border-t border-ink/8">
+          <p className="text-[11px] text-ink/60 leading-snug">
+            Convierte lo que amas en un plan 🍕🍷
+          </p>
+          <p className="text-[10px] text-ink/40 mt-1">
+            Únete a Sero 👇
+          </p>
+        </div>
+      </div>
+
+      {/* URL pill */}
+      <div className="relative z-10 px-5 pb-5">
+        <div
+          className="rounded-xl px-3 py-2"
+          style={{ backgroundColor: 'rgba(24,24,27,0.06)' }}
+        >
+          <p className="text-[9px] font-medium tracking-wide truncate" style={{ color: 'rgba(24,24,27,0.45)' }}>
+            {shortUrl}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main component ─────────────────────────────────────────────────────── */
+
 export function ShareScreen({
   result,
   firstName,
-  initialBlob,
+  initialBlob: _initialBlob,
 }: {
   result: SubmitResult;
   firstName: string;
   initialBlob?: File | null;
 }) {
   const [copied, setCopied] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(!!initialBlob);
-  const blobRef = useRef<File | null>(initialBlob ?? null);
-
-  // Object URL for preview — created once from preloaded blob if available
-  const [previewSrc, setPreviewSrc] = useState<string | null>(() =>
-    initialBlob ? URL.createObjectURL(initialBlob) : null
-  );
+  const [igTapped, setIgTapped] = useState(false);
 
   const shareUrl =
     typeof window !== 'undefined'
       ? `${window.location.origin}/${result.slug}`
       : result.url;
 
-  const storyUrl =
-    typeof window !== 'undefined'
-      ? result.igUrl.replace(/^https?:\/\/[^/]+/, window.location.origin)
-      : result.igUrl;
-
-  // If we didn't get a preloaded blob, fetch it now (fallback)
-  useEffect(() => {
-    if (blobRef.current) return; // already preloaded — skip
-    fetch(storyUrl)
-      .then((r) => r.blob())
-      .then((blob) => {
-        const file = new File([blob], `sero-story-${result.slug}.png`, { type: 'image/png' });
-        blobRef.current = file;
-        setPreviewSrc(URL.createObjectURL(blob));
-      })
-      .catch(() => {});
-  }, [storyUrl, result.slug]);
-
-  // Revoke object URL on unmount
-  useEffect(() => {
-    return () => { if (previewSrc) URL.revokeObjectURL(previewSrc); };
-  }, [previewSrc]);
-
-  const waMessage = useMemo(
-    () => buildWhatsAppMessage({ url: shareUrl, tags: result.tags }),
-    [shareUrl, result.tags]
-  );
+  // Pick the 2 most personal items from server-computed tags
+  const tags = (result.tags ?? []).filter(Boolean);
+  const item1 = tags[0] ?? 'algo que amas';
+  const item2 = tags[1] ?? null;
 
   const copyLink = async () => {
     try {
@@ -91,132 +190,97 @@ export function ShareScreen({
     } catch { /* noop */ }
   };
 
-  const shareStory = async () => {
-    // Copy URL to clipboard so user can paste it as a sticker in their story
-    navigator.clipboard.writeText(shareUrl).catch(() => {});
-
-    let file = blobRef.current;
-    if (!file) {
-      try {
-        const res = await fetch(storyUrl);
-        const blob = await res.blob();
-        file = new File([blob], `sero-story-${result.slug}.png`, { type: 'image/png' });
-        blobRef.current = file;
-      } catch { /* noop */ }
-    }
-
-    if (
-      file &&
-      typeof navigator.share === 'function' &&
-      typeof navigator.canShare === 'function' &&
-      navigator.canShare({ files: [file] })
-    ) {
-      try {
-        await navigator.share({ files: [file], title: 'Mi perfil Sero' });
-      } catch { /* cancelled */ }
-    } else if (file) {
-      const url = URL.createObjectURL(file);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+  const handleInstagram = async () => {
+    // Copy personal URL so user can paste it as a sticker
+    try { await navigator.clipboard.writeText(shareUrl); } catch { /* noop */ }
+    setIgTapped(true);
+    setTimeout(() => setIgTapped(false), 4000);
+    const ua = navigator.userAgent.toLowerCase();
+    if (/iphone|ipad|ipod/.test(ua)) {
+      window.location.href = 'instagram://camera';
     } else {
-      window.open(storyUrl, '_blank');
+      window.open('https://www.instagram.com/', '_blank');
     }
   };
 
+  const waText = `Este es mi enlace de amigo en Sero: ${shareUrl}`;
+
   return (
-    <div className="min-h-[100svh] flex flex-col items-center bg-cream px-6 py-8">
-      <Logo width={120} priority />
+    <div className="min-h-[100svh] bg-ink flex flex-col items-center px-6 py-10">
 
-      <div className="mt-6 w-full max-w-sm text-center fade-up">
-        <h1 className="text-2xl font-semibold tracking-tight leading-snug">
-          ¡Listo, {firstName || 'amigo'}! 🎉
+      {/* Logo */}
+      <Logo width={110} />
+
+      {/* Headline */}
+      <div className="mt-8 text-center">
+        <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
+          ¡Listo, {firstName || 'amigo'}!
         </h1>
-        <p className="mt-2 text-ink/60 text-sm leading-relaxed">
-          Para crear tu primera experiencia, solo falta sumar los gustos de tus amigos.
+        <p className="mt-2 text-white/45 text-sm sm:text-base max-w-xs mx-auto leading-relaxed">
+          Comparte tu mundo — tu gente ya está esperándote.
         </p>
       </div>
 
-      {/* Story image preview */}
-      <div className="mt-6 fade-up">
-        <div
-          className="relative mx-auto rounded-2xl overflow-hidden shadow-xl bg-plum/10"
-          style={{ width: 140, height: 249 }} /* 9:16 ratio */
-        >
-          {!imgLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 h-6 rounded-full border-2 border-plum border-t-transparent animate-spin" />
-            </div>
-          )}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={previewSrc ?? storyUrl}
-            alt="Tu story de Sero"
-            className={`w-full h-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setImgLoaded(true)}
-          />
-        </div>
+      {/* Story card preview */}
+      <div
+        className="mt-8 shrink-0"
+        style={{ width: 220, height: Math.round(220 * 16 / 9) }}
+      >
+        <StoryCard
+          firstName={firstName}
+          item1={item1}
+          item2={item2}
+          shareUrl={shareUrl}
+        />
       </div>
 
-      {/* Actions */}
-      <div className="mt-6 w-full max-w-sm flex flex-col gap-3 fade-up">
-
-        {/* Step 1: copy link */}
-        <div className="rounded-xl bg-white/70 border border-ink/10 px-4 py-3 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] text-ink/50 uppercase tracking-widest leading-none mb-1">
-              1 · Copia tu link
-            </p>
-            <p className="text-sm font-medium truncate text-ink/80">{shareUrl}</p>
-          </div>
-          <button
-            onClick={copyLink}
-            className="shrink-0 btn-secondary !py-1.5 !px-3 text-xs"
-          >
-            {copied ? 'Copiado ✓' : 'Copiar'}
-          </button>
-        </div>
-
-        {/* Step 2: share as story */}
+      {/* URL strip */}
+      <div className="mt-6 w-full max-w-sm flex items-center gap-3 bg-white/[0.07] border border-white/10 rounded-2xl px-4 py-3">
+        <p className="flex-1 min-w-0 text-sm text-white/50 truncate">{shareUrl}</p>
         <button
-          onClick={shareStory}
-          className="btn-primary flex items-center justify-center gap-2"
+          onClick={copyLink}
+          className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/20 text-white/70 transition-colors"
+          style={{ background: copied ? 'rgba(255,107,94,0.2)' : 'transparent' }}
         >
-          <IconInstagram />
-          2 · Compartir como story
+          {copied ? 'Copiado ✓' : 'Copiar'}
         </button>
+      </div>
 
-        {/* Hint */}
-        <p className="text-center text-ink/40 text-xs -mt-1">
-          Pega tu link como sticker en la story 👆
-        </p>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-1">
-          <div className="flex-1 h-px bg-ink/10" />
-          <span className="text-ink/30 text-xs">o</span>
-          <div className="flex-1 h-px bg-ink/10" />
-        </div>
+      {/* Share buttons */}
+      <div className="mt-4 w-full max-w-sm flex flex-col gap-3">
 
         {/* WhatsApp */}
         <a
-          href={whatsappShareUrl(waMessage)}
+          href={`https://wa.me/?text=${encodeURIComponent(waText)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-secondary flex items-center justify-center gap-2"
-          style={{ color: '#128C7E' }}
+          className="flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-bold text-white transition-opacity active:opacity-75"
+          style={{ backgroundColor: '#25D366' }}
         >
           <IconWhatsApp />
-          Enviar por WhatsApp
+          Compartir por WhatsApp
         </a>
+
+        {/* Instagram */}
+        <button
+          onClick={handleInstagram}
+          className="flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-bold text-white border border-white/15 transition-colors"
+          style={{ background: igTapped ? 'rgba(255,255,255,0.07)' : 'transparent' }}
+        >
+          <IconInstagram />
+          {igTapped ? 'Link copiado — pégalo como sticker ✓' : 'Compartir en Instagram'}
+        </button>
+
+        {igTapped && (
+          <p className="text-center text-white/35 text-xs -mt-1">
+            Abre Instagram stories y pega tu link como sticker 👆
+          </p>
+        )}
       </div>
 
-      <p className="mt-8 text-ink/30 text-xs tracking-widest uppercase">
-        Sero · Mismos gustos, mejores planes.
+      {/* Footer */}
+      <p className="mt-12 text-white/20 text-xs tracking-[0.3em] uppercase">
+        Sero · {new Date().getFullYear()}
       </p>
     </div>
   );
