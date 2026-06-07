@@ -139,29 +139,30 @@ html, body {
   will-change: transform, opacity;
 }
 
-/* O ring — starts flush with the O stroke, ripples outward just slightly */
-@keyframes oRing {
-  0%   { opacity: 0;   transform: scale(0.9);  box-shadow: 0 0 0 0 rgba(224,106,95,0); }
-  15%  { opacity: 0.9; transform: scale(1);    box-shadow: 0 0 6px 2px rgba(224,106,95,0.4); }
-  60%  { opacity: 0.4; transform: scale(1.18); box-shadow: 0 0 10px 4px rgba(224,106,95,0.15); }
-  100% { opacity: 0;   transform: scale(1.35); box-shadow: 0 0 0 0 rgba(224,106,95,0); }
+/* O ring — SVG circle ripple (transform-box makes scale pivot from circle center) */
+@keyframes oRingSvg {
+  0%   { opacity: 0;    transform: scale(0.88); }
+  12%  { opacity: 0.85; transform: scale(1);    }
+  100% { opacity: 0;    transform: scale(1.48); }
 }
-.animate-o-ring {
-  animation: oRing 1.0s cubic-bezier(.2,.7,.4,1) both;
-  border: 1.5px solid rgba(224,106,95,0.75);
+.animate-o-ring-svg {
+  animation: oRingSvg 1.05s ease-out both;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
-/* O glint — white light reflection at top-left of the ring */
-@keyframes oGlint {
-  0%   { opacity: 0; transform: scale(0);    filter: blur(2px); }
-  18%  { opacity: 1; transform: scale(2.2);  filter: blur(0px); }
-  50%  { opacity: 0.6; transform: scale(1.5); filter: blur(1px); }
-  100% { opacity: 0; transform: scale(0.6);  filter: blur(3px); }
+/* O glint — white spark at top-left arc */
+@keyframes oGlintSvg {
+  0%   { opacity: 0;   transform: scale(0);   filter: blur(1px); }
+  18%  { opacity: 1;   transform: scale(2.8); filter: blur(0);   }
+  55%  { opacity: 0.5; transform: scale(1.8); filter: blur(0.5px); }
+  100% { opacity: 0;   transform: scale(0.5); filter: blur(2px); }
 }
-.animate-o-glint {
-  animation: oGlint 0.75s cubic-bezier(.2,.9,.3,1) both;
-  background: white;
-  box-shadow: 0 0 8px 4px rgba(255,255,255,0.9), 0 0 16px 8px rgba(224,106,95,0.4);
+.animate-o-glint-svg {
+  animation: oGlintSvg 0.7s cubic-bezier(.2,.9,.3,1) both;
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 3px white) drop-shadow(0 0 6px rgba(224,106,95,0.55));
 }
 
 /* Slide between quiz steps */

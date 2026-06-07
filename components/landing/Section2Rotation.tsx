@@ -37,44 +37,19 @@ export function Section2Rotation() {
           className="blob animate-blob bg-sand/60"
           style={{ width: 360, height: 360, top: '30%', right: '20%', animationDelay: '4s' }}
         />
-        {/* Lilac accent blob */}
         <div
           className="blob animate-blob-slow"
           style={{ width: 300, height: 300, top: '15%', right: '-8%', background: 'rgba(183,139,184,0.28)', animationDelay: '2s' }}
         />
-        {/* Gold accent blob */}
         <div
           className="blob animate-blob"
           style={{ width: 220, height: 220, bottom: '20%', left: '5%', background: 'rgba(255,209,102,0.25)', animationDelay: '6s' }}
         />
       </div>
 
-      {/* Logo — PNG never modified; two-layer O light effect on top */}
+      {/* Logo — SVG wordmark; animKey triggers O burst on each slot tick */}
       <div className="fade-up flex flex-col items-center mb-14 sm:mb-16">
-        <div className="relative inline-block" style={{ lineHeight: 0 }}>
-          <Logo width={220} priority />
-
-          {/*
-            O diameter ≈ 34px at 220px display; center ≈ right:34px top:45px.
-            Layer 1: ring that starts flush with the O and expands outward
-          */}
-          <div
-            key={`ring-${i}`}
-            className="absolute animate-o-ring rounded-full pointer-events-none"
-            style={{ width: 34, height: 34, right: 34, top: 45 }}
-            aria-hidden="true"
-          />
-
-          {/*
-            Layer 2: white glint at top-left arc (≈ 135° position on the ring)
-          */}
-          <div
-            key={`glint-${i}`}
-            className="absolute animate-o-glint rounded-full pointer-events-none"
-            style={{ width: 8, height: 8, right: 59, top: 45 }}
-            aria-hidden="true"
-          />
-        </div>
+        <Logo width={220} animKey={i} />
         <p className="mt-3 text-ink/60 text-sm sm:text-base tracking-wide">
           Mismos gustos, mejores planes
         </p>
