@@ -55,23 +55,23 @@ export function Section2Rotation() {
           <Logo width={220} priority />
 
           {/*
-            O sits at ~right:50px top:61px (radius≈21px) in the 220×124 display.
-            Layer 1: coral ring that expands out from the O stroke
+            O diameter ≈ 34px at 220px display; center ≈ right:34px top:45px.
+            Layer 1: ring that starts flush with the O and expands outward
           */}
           <div
             key={`ring-${i}`}
             className="absolute animate-o-ring rounded-full pointer-events-none"
-            style={{ width: 44, height: 44, right: 28, top: 39 }}
+            style={{ width: 34, height: 34, right: 34, top: 45 }}
             aria-hidden="true"
           />
 
           {/*
-            Layer 2: white glint at top-left arc — like light catching glass
+            Layer 2: white glint at top-left arc (≈ 135° position on the ring)
           */}
           <div
             key={`glint-${i}`}
             className="absolute animate-o-glint rounded-full pointer-events-none"
-            style={{ width: 9, height: 9, right: 62, top: 43 }}
+            style={{ width: 8, height: 8, right: 59, top: 45 }}
             aria-hidden="true"
           />
         </div>

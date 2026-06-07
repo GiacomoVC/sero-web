@@ -139,16 +139,16 @@ html, body {
   will-change: transform, opacity;
 }
 
-/* O ring — expands outward from the O stroke like a ripple */
+/* O ring — starts flush with the O stroke, ripples outward just slightly */
 @keyframes oRing {
-  0%   { opacity: 0;   transform: scale(0.75); box-shadow: 0 0 0 0 rgba(224,106,95,0); }
-  20%  { opacity: 0.8; transform: scale(1);    box-shadow: 0 0 8px 3px rgba(224,106,95,0.35); }
-  70%  { opacity: 0.3; transform: scale(1.25); box-shadow: 0 0 14px 6px rgba(224,106,95,0.15); }
-  100% { opacity: 0;   transform: scale(1.5);  box-shadow: 0 0 0 0 rgba(224,106,95,0); }
+  0%   { opacity: 0;   transform: scale(0.9);  box-shadow: 0 0 0 0 rgba(224,106,95,0); }
+  15%  { opacity: 0.9; transform: scale(1);    box-shadow: 0 0 6px 2px rgba(224,106,95,0.4); }
+  60%  { opacity: 0.4; transform: scale(1.18); box-shadow: 0 0 10px 4px rgba(224,106,95,0.15); }
+  100% { opacity: 0;   transform: scale(1.35); box-shadow: 0 0 0 0 rgba(224,106,95,0); }
 }
 .animate-o-ring {
-  animation: oRing 1.1s cubic-bezier(.2,.7,.4,1) both;
-  border: 1.5px solid rgba(224,106,95,0.7);
+  animation: oRing 1.0s cubic-bezier(.2,.7,.4,1) both;
+  border: 1.5px solid rgba(224,106,95,0.75);
 }
 
 /* O glint — white light reflection at top-left of the ring */
