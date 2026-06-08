@@ -25,7 +25,7 @@ export const PROCESS_STEPS = [
     num:    '03',
     icon:   '🥂',
     title:  'Vive mejores planes',
-    body:   'Sero se encarga de todo. Tú solo ven.',
+    body:   'Sero se encarga de todo, tú solo disfruta.',
     bubble: 'bg-butter',
     accent: 'text-[#8A6A1A]',
   },
