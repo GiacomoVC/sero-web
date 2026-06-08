@@ -34,18 +34,22 @@ export interface QuizResponses {
   otrosMundos?: string;
 
   // Per-world answers (categories = recall-aid multiselect, then open Qs)
-  musica?: { categories: string[]; eras: string[]; topArtists: string };
-  series?: { categories: string[]; seriesOtro?: string; region: string[]; netflixPick: string[] };
-  peliculas?: { categories: string[]; tipo: string[]; favorites: string };
+  // `picks` = chips chosen from the suggestion list driven by selected
+  // categories. Optional — complements (does not replace) the free-text
+  // fields below.
+  musica?: { categories: string[]; eras: string[]; topArtists: string; picks?: string[] };
+  series?: { categories: string[]; seriesOtro?: string; region: string[]; netflixPick: string[]; picks?: string[] };
+  peliculas?: { categories: string[]; tipo: string[]; favorites: string; picks?: string[] };
   anime?: {
     categories: string[];
     preference: AnimeMangaPref;
     favorites: string;
     current: string;
+    picks?: string[];
   };
-  libros?: { categories: string[]; topBooks: string; recent: string };
+  libros?: { categories: string[]; topBooks: string; recent: string; picks?: string[] };
   deportes?: { selected: Sport[]; otros?: string };
-  videojuegos?: { categories: string[]; favorites: string };
+  videojuegos?: { categories: string[]; favorites: string; picks?: string[] };
 
   // Closing preferences
   diningStyle: DiningStyle;

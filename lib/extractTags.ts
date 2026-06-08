@@ -25,6 +25,7 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
 
   if (q.musica) {
     const p = [
+      ...chips(q.musica.picks),               // quick-pick chips (highest signal)
       ...parseFreeText(q.musica.topArtists),
       ...chips(q.musica.categories),
     ];
@@ -33,6 +34,7 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
 
   if (q.series) {
     const p = [
+      ...chips(q.series.picks),
       ...chips(q.series.netflixPick),
       ...parseFreeText(q.series.seriesOtro),
       ...chips(q.series.categories),
@@ -43,6 +45,7 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
 
   if (q.peliculas) {
     const p = [
+      ...chips(q.peliculas.picks),
       ...parseFreeText(q.peliculas.favorites),
       ...chips(q.peliculas.tipo),
       ...chips(q.peliculas.categories),
@@ -52,6 +55,7 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
 
   if (q.anime) {
     const p = [
+      ...chips(q.anime.picks),
       ...parseFreeText(q.anime.favorites),
       ...parseFreeText(q.anime.current),
       ...chips(q.anime.categories),
@@ -61,6 +65,7 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
 
   if (q.libros) {
     const p = [
+      ...chips(q.libros.picks),
       ...parseFreeText(q.libros.topBooks),
       ...parseFreeText(q.libros.recent),
       ...chips(q.libros.categories),
@@ -70,6 +75,7 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
 
   if (q.videojuegos) {
     const p = [
+      ...chips(q.videojuegos.picks),
       ...parseFreeText(q.videojuegos.favorites),
       ...chips(q.videojuegos.categories),
     ];

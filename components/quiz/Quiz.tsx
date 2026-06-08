@@ -13,6 +13,7 @@ import {
   SERIES_REGIONS,
   SPORTS,
   WORLDS,
+  suggestionsFor,
 } from '@/lib/worlds';
 import type {
   AnimeMangaPref,
@@ -448,6 +449,52 @@ function CategoryChips({
   );
 }
 
+/**
+ * Quick-pick chips driven by the user's selected categories. Hidden until at
+ * least one category is chosen, since the suggestion list depends on it.
+ */
+function PicksChips({
+  world,
+  selectedCategories,
+  value,
+  onChange,
+  label,
+}: {
+  world: Exclude<World, 'otros' | 'deportes'>;
+  selectedCategories: string[];
+  value: string[];
+  onChange: (next: string[]) => void;
+  label: string;
+}) {
+  const options = useMemo(
+    () => suggestionsFor(world, selectedCategories),
+    [world, selectedCategories],
+  );
+  if (options.length === 0) return null;
+  const toggle = (opt: string) => {
+    onChange(value.includes(opt) ? value.filter((o) => o !== opt) : [...value, opt]);
+  };
+  return (
+    <Field label={label}>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const active = value.includes(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => toggle(opt)}
+              className={`chip ${active ? 'chip-active' : 'chip-idle'}`}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    </Field>
+  );
+}
+
 function WorldStep({
   world,
   q,
@@ -461,7 +508,7 @@ function WorldStep({
   ) => void;
 }) {
   if (world === 'musica') {
-    const v = { categories: [] as string[], eras: [] as string[], topArtists: '', ...q.musica };
+    const v = { categories: [] as string[], eras: [] as string[], topArtists: '', picks: [] as string[], ...q.musica };
     return (
       <>
         <StepTitle title="🎧 Música" />
@@ -471,13 +518,20 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('musica', { categories: next })}
           />
+          <PicksChips
+            world="musica"
+            selectedCategories={v.categories}
+            value={v.picks ?? []}
+            onChange={(next) => updateWorld('musica', { picks: next })}
+            label="¿Cuáles de estos te encantan?"
+          />
           <CategoryChips
             label="¿Qué épocas te gustan más?"
             options={MUSIC_ERAS}
             value={v.eras}
             onChange={(next) => updateWorld('musica', { eras: next })}
           />
-          <Field label="(OPCIONAL) ¿Cuáles son tus top 3 artistas del momento?">
+          <Field label="(OPCIONAL) ¿Algún artista más que amas y no está arriba?">
             <input
               className="input"
               placeholder="ej. Arctic Monkeys, Bad Bunny, Billie Eilish"
@@ -492,7 +546,7 @@ function WorldStep({
     );
   }
   if (world === 'series') {
-    const v = { categories: [] as string[], seriesOtro: '', region: [] as string[], netflixPick: [] as string[], ...q.series };
+    const v = { categories: [] as string[], seriesOtro: '', region: [] as string[], netflixPick: [] as string[], picks: [] as string[], ...q.series };
     return (
       <>
         <StepTitle title="📺 Series" />
@@ -514,6 +568,13 @@ function WorldStep({
               />
             </Field>
           )}
+          <PicksChips
+            world="series"
+            selectedCategories={v.categories}
+            value={v.picks ?? []}
+            onChange={(next) => updateWorld('series', { picks: next })}
+            label="¿Cuáles de estas te enganchan?"
+          />
           <CategoryChips
             label="Región de tus series favoritas:"
             options={SERIES_REGIONS}
@@ -531,7 +592,7 @@ function WorldStep({
     );
   }
   if (world === 'peliculas') {
-    const v = { categories: [] as string[], tipo: [] as string[], favorites: '', ...q.peliculas };
+    const v = { categories: [] as string[], tipo: [] as string[], favorites: '', picks: [] as string[], ...q.peliculas };
     return (
       <>
         <StepTitle title="🎬 Películas" />
@@ -541,13 +602,20 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('peliculas', { categories: next })}
           />
+          <PicksChips
+            world="peliculas"
+            selectedCategories={v.categories}
+            value={v.picks ?? []}
+            onChange={(next) => updateWorld('peliculas', { picks: next })}
+            label="¿Cuáles de estas te marcaron?"
+          />
           <CategoryChips
             label="¿Qué tipo? Todas las que te gusten"
             options={PELICULA_TIPOS}
             value={v.tipo}
             onChange={(next) => updateWorld('peliculas', { tipo: next })}
           />
-          <Field label="(OPCIONAL) Pon 1 o más de tus favoritas">
+          <Field label="(OPCIONAL) ¿Alguna otra peli o director que amas?">
             <input
               className="input"
               placeholder="ej. Tarantino, Interestelar, El padrino…"
@@ -563,7 +631,7 @@ function WorldStep({
   }
   if (world === 'anime') {
     const v =
-      { categories: [] as string[], preference: 'ambos' as AnimeMangaPref, favorites: '', current: '', ...q.anime };
+      { categories: [] as string[], preference: 'ambos' as AnimeMangaPref, favorites: '', current: '', picks: [] as string[], ...q.anime };
     const opts: { id: AnimeMangaPref; label: string }[] = [
       { id: 'anime', label: 'Anime' },
       { id: 'manga', label: 'Manga' },
@@ -577,6 +645,13 @@ function WorldStep({
             options={CATEGORIES.anime}
             value={v.categories}
             onChange={(next) => updateWorld('anime', { categories: next })}
+          />
+          <PicksChips
+            world="anime"
+            selectedCategories={v.categories}
+            value={v.picks ?? []}
+            onChange={(next) => updateWorld('anime', { picks: next })}
+            label="¿Cuáles te has clavado?"
           />
           <Field label="¿Qué prefieres?">
             <div className="flex flex-wrap gap-2">
@@ -619,7 +694,7 @@ function WorldStep({
     );
   }
   if (world === 'libros') {
-    const v = { categories: [] as string[], topBooks: '', recent: '', ...q.libros };
+    const v = { categories: [] as string[], topBooks: '', recent: '', picks: [] as string[], ...q.libros };
     return (
       <>
         <StepTitle title="📚 Libros" />
@@ -629,7 +704,14 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('libros', { categories: next })}
           />
-          <Field label="Pon 1 o más libros o autores favoritos (puedes saltar)">
+          <PicksChips
+            world="libros"
+            selectedCategories={v.categories}
+            value={v.picks ?? []}
+            onChange={(next) => updateWorld('libros', { picks: next })}
+            label="¿Cuáles de estos autores / libros te gustan?"
+          />
+          <Field label="(OPCIONAL) Otros libros o autores que amas">
             <textarea
               className="input min-h-[60px]"
               placeholder="ej. Borges, o Dune"
@@ -696,7 +778,7 @@ function WorldStep({
     );
   }
   if (world === 'videojuegos') {
-    const v = { categories: [] as string[], favorites: '', ...q.videojuegos };
+    const v = { categories: [] as string[], favorites: '', picks: [] as string[], ...q.videojuegos };
     return (
       <>
         <StepTitle title="🎮 Videojuegos" />
@@ -706,7 +788,14 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('videojuegos', { categories: next })}
           />
-          <Field label="Pon 1 o más juegos favoritos (puedes saltar)">
+          <PicksChips
+            world="videojuegos"
+            selectedCategories={v.categories}
+            value={v.picks ?? []}
+            onChange={(next) => updateWorld('videojuegos', { picks: next })}
+            label="¿Cuáles de estos juegas o te marcaron?"
+          />
+          <Field label="(OPCIONAL) Otros juegos favoritos">
             <textarea
               className="input min-h-[60px]"
               placeholder="ej. Zelda, o League of Legends"
