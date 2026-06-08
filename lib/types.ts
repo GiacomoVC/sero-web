@@ -39,7 +39,7 @@ export interface QuizResponses {
   // categories. Optional — complements (does not replace) the free-text
   // fields below.
   musica?: { categories: string[]; eras: string[]; topArtists: string; picks?: string[] };
-  series?: { categories: string[]; seriesOtro?: string; region: string[]; netflixPick: string[]; picks?: string[] };
+  series?: { categories: string[]; seriesOtro?: string; region: string[]; favorites?: string; picks?: string[] };
   peliculas?: { categories: string[]; tipo: string[]; favorites: string; picks?: string[] };
   anime?: {
     categories: string[];

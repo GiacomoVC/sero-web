@@ -35,7 +35,7 @@ export function extractTags(q: QuizResponses, max = 6): string[] {
   if (q.series) {
     const p = [
       ...chips(q.series.picks),
-      ...chips(q.series.netflixPick),
+      ...parseFreeText(q.series.favorites),
       ...parseFreeText(q.series.seriesOtro),
       ...chips(q.series.categories),
       ...chips(q.series.region),

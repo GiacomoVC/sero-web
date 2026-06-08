@@ -8,7 +8,6 @@ import {
   CATEGORIES,
   MAX_WORLDS,
   MUSIC_ERAS,
-  NETFLIX_PICKS,
   PELICULA_TIPOS,
   SERIES_REGIONS,
   SPORTS,
@@ -551,7 +550,7 @@ function WorldStep({
           <Field label="(OPCIONAL) ¿Algún artista más que amas y no está arriba?">
             <input
               className="input"
-              placeholder="ej. Arctic Monkeys, Bad Bunny, Billie Eilish"
+              placeholder="ej, Billie Eilish, Elton John"
               value={v.topArtists}
               onChange={(e) =>
                 updateWorld('musica', { topArtists: e.target.value })
@@ -563,7 +562,7 @@ function WorldStep({
     );
   }
   if (world === 'series') {
-    const v = { categories: [] as string[], seriesOtro: '', region: [] as string[], netflixPick: [] as string[], picks: [] as string[], ...q.series };
+    const v = { categories: [] as string[], seriesOtro: '', region: [] as string[], favorites: '', picks: [] as string[], ...q.series };
     return (
       <>
         <StepTitle title="📺 Series" />
@@ -598,12 +597,16 @@ function WorldStep({
             value={v.region}
             onChange={(next) => updateWorld('series', { region: next })}
           />
-          <CategoryChips
-            label="De las últimas series en Netflix, ¿cuál te gustó más?"
-            options={NETFLIX_PICKS}
-            value={v.netflixPick}
-            onChange={(next) => updateWorld('series', { netflixPick: next })}
-          />
+          <Field label="(OPCIONAL) ¿Alguna otra serie?">
+            <input
+              className="input"
+              placeholder="ej, The Bear, Severance"
+              value={v.favorites || ''}
+              onChange={(e) =>
+                updateWorld('series', { favorites: e.target.value })
+              }
+            />
+          </Field>
         </div>
       </>
     );
@@ -847,15 +850,15 @@ function ClosingStep({
     { id: 'alergia', label: 'Alergias' },
   ];
   const expOpts: { id: ExpPreference; label: string }[] = [
-    { id: 'solo_amigos', label: 'Sentarte con amigos de amigos' },
-    { id: 'plus_one', label: 'Amigos de amigos y llevar un +1' },
+    { id: 'solo_amigos', label: 'ir solo' },
+    { id: 'plus_one', label: 'llevar un +1' },
   ];
 
   return (
     <>
       <StepTitle title="Lo último." sub="Para armar planes que se sientan tuyos." />
 
-      <Field label="En una mesa con amigos, sueles:">
+      <Field label="en una mesa con amigos de amigos, sueles">
         <div className="flex flex-wrap gap-2">
           {diningOpts.map((o) => (
             <button

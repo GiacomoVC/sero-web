@@ -30,7 +30,7 @@ const COLUMNS = [
   // Música
   'musica.categories', 'musica.picks', 'musica.eras', 'musica.topArtists',
   // Series
-  'series.categories', 'series.picks', 'series.seriesOtro', 'series.region', 'series.netflixPick',
+  'series.categories', 'series.picks', 'series.seriesOtro', 'series.region', 'series.favorites',
   // Películas
   'peliculas.categories', 'peliculas.picks', 'peliculas.tipo', 'peliculas.favorites',
   // Anime
@@ -55,7 +55,6 @@ const ARRAY_FIELDS = {
   'series.categories':    true,
   'series.picks':         true,
   'series.region':        true,
-  'series.netflixPick':   true,
   'peliculas.categories': true,
   'peliculas.picks':      true,
   'peliculas.tipo':       true,
