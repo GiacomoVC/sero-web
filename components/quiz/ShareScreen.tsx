@@ -5,7 +5,7 @@ import { StoryCard, type StoryCardHandle } from './StoryCard';
 import { Confetti } from '../ui/Confetti';
 import { StickerNote } from '../ui/StickerNote';
 import { Highlight } from '../ui/Highlight';
-import { shareVideoOrDownload } from '@/lib/shareVideo';
+import { shareVideoBlob } from '@/lib/shareVideo';
 import type { SubmitResult } from '@/lib/types';
 
 export function ShareScreen({
@@ -43,39 +43,35 @@ export function ShareScreen({
     return () => clearInterval(id);
   }, [stage]);
 
-  // The share click runs SYNCHRONOUSLY in the user gesture context as long
-  // as the pre-recorded blob is already prepared. shareVideoOrDownload itself
-  // does a tiny `await fetch(blobUrl)` to materialize the File, but iOS Safari
-  // preserves the gesture for microtask-scope awaits on local blob URLs.
-  const handleShare = async () => {
+  // The share handler MUST be synchronous up to navigator.share() to preserve
+  // the iOS user-gesture context. We pre-recorded the Blob on mount, so the
+  // click handler can construct the File and call share() with zero awaits.
+  const handleShare = (_e: React.MouseEvent) => {
     if (stage !== 'ready') return;
+    const ready = cardRef.current?.getReadyVideo();
+    if (!ready) return;
 
-    // Copy URL — fire & forget, doesn't block the gesture
+    // Copy URL — fire & forget, doesn't block the gesture.
     navigator.clipboard.writeText(shareUrl).catch(() => {});
 
-    const ready = cardRef.current?.getReadyVideo();
-    if (!ready) {
-      // Shouldn't happen since button is gated on onReady, but be safe.
-      return;
-    }
-
     setStage('sharing');
-    try {
-      const outcome = await shareVideoOrDownload(
-        ready.url,
-        `sero-${result.slug}.${ext(ready.ext)}`,
-        { title: 'sero', text: 'Únete a sero — amigos que comparten lo que amas' },
-      );
-
-      if (outcome === 'cancelled') {
-        setStage('ready');
-      } else {
-        setStage('done');
-        setTimeout(() => setStage('ready'), 4000); // allow re-sharing
-      }
-    } catch {
-      setStage('ready');
-    }
+    // shareVideoBlob is synchronous up to navigator.share() — the returned
+    // promise resolves after the user dismisses the share sheet.
+    shareVideoBlob(
+      ready.blob,
+      ready.url,
+      `sero-${result.slug}.${ready.ext}`,
+      { title: 'sero', text: 'Únete a sero — amigos que comparten lo que amas' },
+    )
+      .then((outcome) => {
+        if (outcome === 'cancelled') {
+          setStage('ready');
+        } else {
+          setStage('done');
+          setTimeout(() => setStage('ready'), 4000);
+        }
+      })
+      .catch(() => setStage('ready'));
   };
 
   const buttonLabel = () => {
@@ -170,6 +166,3 @@ export function ShareScreen({
   );
 }
 
-function ext(x: string) {
-  return x === 'mp4' || x === 'webm' || x === 'mov' ? x : 'mp4';
-}

@@ -209,8 +209,9 @@ function drawChip(
 
   ctx.font = `700 ${fontSize}px Sora, system-ui, sans-serif`;
   // IMPORTANT: ctx.letterSpacing is NOT included in canvas save/restore state,
-  // so it bleeds across draw calls. Explicitly reset to normal here.
-  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `0px`;
+  // so it bleeds across draw calls. Open the tracking slightly — Sora at large
+  // weights is naturally tight and feels cramped at story-card scale.
+  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `1.5px`;
   ctx.textBaseline = 'middle';
   ctx.textAlign    = 'left';
   const fitted = fitText(ctx, text, 760);
@@ -317,26 +318,29 @@ function drawO(
 }
 
 // ─── Final logo geometry (canvas scale) ──────────────────────────────────────
-// SVG viewBox 170×46, ser starts x=44, O at cx=116 r=11 sw=3.4, fontSize=42 letterSpacing=-2.2
-// We want visible logo content ~480px wide on canvas. Scale = 480/83 ≈ 5.78
-const LOGO_FS  = 300;          // font size for "ser" (42 × 7.14)
-const LOGO_R   = 80;           // O radius (11 × 7.27)
-const LOGO_SW  = 24;           // O stroke (3.4 × 7.06)
-const LOGO_CY  = 990;          // O center y (final position)
-const LOGO_LSP = -14;          // letter-spacing for "ser" (canvas px)
+// Custom video-card variant: 'ser' rendered as a wordmark, and the 'o' (the
+// brand's signature graphic) floats ABOVE the 'r' as a halo / accent.
+const LOGO_FS  = 280;          // font size for "ser"
+const LOGO_R   = 64;           // O radius (smaller — floats as accent)
+const LOGO_SW  = 20;           // O stroke
+const LOGO_BASELINE = 1140;    // baseline of "ser"
+const LOGO_LSP = -8;           // mild letter-spacing for "ser"
 
-// Final positions: 'ser' starts at LOGO_SER_X (left edge), O sits to its right
-const LOGO_O_GAP = 16;         // gap between 'r' and 'o' center
 function logoLayout(ctx: CanvasRenderingContext2D) {
   ctx.font = `800 ${LOGO_FS}px Sora, system-ui, sans-serif`;
   (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${LOGO_LSP}px`;
-  const serW = ctx.measureText('ser').width + LOGO_LSP * 2; // adjust for spacing on 3 letters
-  const totalW = serW + LOGO_O_GAP + LOGO_R * 2;
-  const startX = (CW - totalW) / 2;
-  const serX   = startX;
-  const oCX    = startX + serW + LOGO_O_GAP + LOGO_R;
-  const baseline = LOGO_CY + LOGO_R;   // matches SVG: baseline ≈ cy + r
-  return { serX, oCX, baseline, serW, totalW };
+  const serW = ctx.measureText('ser').width;
+  const seW  = ctx.measureText('se').width;
+  // 'ser' centered horizontally on the canvas
+  const serX = (CW - serW) / 2;
+  // 'r' character spans visually from (serX + seW) to (serX + serW); take midpoint
+  const rCenterX = serX + (seW + serW) / 2;
+  // Cap-top of 'ser' (Sora cap-height ≈ 0.72 × em)
+  const capTop = LOGO_BASELINE - LOGO_FS * 0.72;
+  // 'o' floats with a small gap above the cap-top of 'r'
+  const oCX = rCenterX;
+  const oCY = capTop - LOGO_R * 0.55;
+  return { serX, oCX, oCY, baseline: LOGO_BASELINE, serW };
 }
 
 function drawSer(ctx: CanvasRenderingContext2D, x: number, baseline: number, alpha: number, glow = false) {
@@ -355,10 +359,10 @@ function drawSer(ctx: CanvasRenderingContext2D, x: number, baseline: number, alp
 
 // ─── Public handle ───────────────────────────────────────────────────────────
 export interface StoryCardHandle {
-  /** Returns the pre-recorded blob URL synchronously if ready, else awaits it. */
-  captureVideo(): Promise<{ url: string; ext: string }>;
+  /** Returns the pre-recorded result, awaiting if it's still in flight. */
+  captureVideo(): Promise<{ url: string; ext: string; blob: Blob }>;
   /** Synchronous accessor for the pre-recorded result (or null while recording). */
-  getReadyVideo(): { url: string; ext: string } | null;
+  getReadyVideo(): { url: string; ext: string; blob: Blob } | null;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -377,9 +381,11 @@ export const StoryCard = forwardRef<
   const rafRef       = useRef<number>();
   const startRef     = useRef<number>(0);
   const drawFnRef    = useRef<(ctx: CanvasRenderingContext2D, t: number) => void>(() => {});
-  // Pre-recording infrastructure
-  const recordingRef = useRef<Promise<{ url: string; ext: string }> | null>(null);
-  const resultRef    = useRef<{ url: string; ext: string } | null>(null);
+  // Pre-recording infrastructure. We keep the Blob (not just URL) so the
+  // share handler can construct a File synchronously inside the user gesture
+  // — required for navigator.share() to work on iOS Safari.
+  const recordingRef = useRef<Promise<{ url: string; ext: string; blob: Blob }> | null>(null);
+  const resultRef    = useRef<{ url: string; ext: string; blob: Blob } | null>(null);
   const onReadyRef   = useRef<typeof onReady>(onReady);
   onReadyRef.current = onReady;
 
@@ -413,19 +419,28 @@ export const StoryCard = forwardRef<
       //   - 4.6-5.0: fades out during sweep
       const nameLargeY  = 920;
       const nameSmallY  = 380;
-      // Adaptive sizing: start at the target size and shrink to fit names
-      // up to ~9 letters cleanly inside the canvas.
-      const NAME_TARGET_FS = 240;
-      const NAME_SMALL_FS  = 84;
+      // Fixed-target sizing so we never shrink the name below ~comfortable.
+      // Names that exceed the canvas width are truncated character-by-character
+      // and an ellipsis is rendered on a SECOND LINE BELOW the name (so the
+      // dots never interfere with the wordmark).
+      const NAME_TARGET_FS = 200;
+      const NAME_SMALL_FS  = 80;
+      const MAX_NAME_W     = CW - 200;
+      const rawName        = firstName || 'amig@';
       ctx.save();
       ctx.font = `800 ${NAME_TARGET_FS}px Sora, system-ui, sans-serif`;
-      (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-2px`;
-      const measured = ctx.measureText(firstName || 'amig@').width;
+      (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-1px`;
+      let dispName    = rawName;
+      let nameOverflow = false;
+      if (ctx.measureText(dispName).width > MAX_NAME_W) {
+        nameOverflow = true;
+        while (dispName.length > 1 && ctx.measureText(dispName).width > MAX_NAME_W) {
+          dispName = dispName.slice(0, -1);
+        }
+      }
       ctx.restore();
-      const MAX_NAME_W = CW - 200;
-      const fitScale = measured > MAX_NAME_W ? MAX_NAME_W / measured : 1;
-      const nameLargeFS = Math.floor(NAME_TARGET_FS * fitScale);
-      const nameSmallFS = Math.floor(NAME_SMALL_FS  * fitScale);
+      const nameLargeFS = NAME_TARGET_FS;
+      const nameSmallFS = NAME_SMALL_FS;
 
       const shrinkP = eInOut(il(1.4, 1.8, t));
       const nameY   = nameLargeY  + (nameSmallY  - nameLargeY)  * shrinkP;
@@ -455,12 +470,20 @@ export const StoryCard = forwardRef<
         ctx.save();
         ctx.globalAlpha = nameA;
         ctx.font = `800 ${nameFS}px Sora, system-ui, sans-serif`;
-        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-2px`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-1px`;
         ctx.fillStyle = C.ink;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const dispName = fitText(ctx, firstName || 'amig@', CW - 160);
         ctx.fillText(dispName, CW / 2, nameY);
+        // If the name had to be truncated, render an ellipsis on a second
+        // line below — keeps it out of the name's typography.
+        if (nameOverflow && shrinkP < 0.4) {
+          ctx.font = `800 ${Math.floor(nameFS * 0.55)}px Sora, system-ui, sans-serif`;
+          ctx.fillStyle = `rgba(24,24,27,${0.55 * nameA})`;
+          ctx.globalAlpha = 1;
+          ctx.fillText('…', CW / 2, nameY + nameFS * 0.62);
+          ctx.globalAlpha = nameA;
+        }
 
         // Underline only during phase 1 (large name)
         if (shrinkP < 0.4) {
@@ -513,8 +536,10 @@ export const StoryCard = forwardRef<
       // ── Phase 3: SWEEP + BIG O draws in (4.9 – 5.6s) ─────────────────────
       // Big O lives at (CW/2, 870), R=210, sw=22 (3.4× the final SW for impact)
       // Then in Phase 4 (5.6–6.5s) it scales+moves to the logo position.
+      // Big O appears centered in upper-middle, then morphs to its accent
+      // position above the 'r' of 'ser' in phase 4.
       const BIG_CX = CW / 2;
-      const BIG_CY = 900;
+      const BIG_CY = 1000;
       const BIG_R  = 230;
       const BIG_SW = 34;
 
@@ -533,7 +558,7 @@ export const StoryCard = forwardRef<
       if (bigDrawP > 0.01) {
         const layout = logoLayout(ctx);
         const targetCX = layout.oCX;
-        const targetCY = LOGO_CY;
+        const targetCY = layout.oCY;
         const curCX = BIG_CX + (targetCX - BIG_CX) * morphP;
         const curCY = BIG_CY + (targetCY - BIG_CY) * morphP;
         const curR  = BIG_R  + (LOGO_R  - BIG_R)  * morphP;
@@ -567,7 +592,7 @@ export const StoryCard = forwardRef<
         ctx.fillStyle = C.plum;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.translate(CW / 2, 640);
+        ctx.translate(CW / 2, 540);
         ctx.rotate((-2 * Math.PI) / 180);
         ctx.fillText('¿y tú?', 0, 0);
         ctx.restore();
@@ -576,11 +601,12 @@ export const StoryCard = forwardRef<
         ctx.save();
         ctx.globalAlpha = ctaTopA;
         ctx.font = `600 76px Sora, system-ui, sans-serif`;
-        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `0px`;
+        // Open letter-spacing so the small label reads cleanly at story scale
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `2px`;
         ctx.fillStyle = C.inkSoft;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('únete a', CW / 2, 820);
+        ctx.fillText('únete a', CW / 2, 700);
         ctx.restore();
       }
 
@@ -589,12 +615,12 @@ export const StoryCard = forwardRef<
         ctx.globalAlpha = ctaBotA;
         // Two lines for readability at IG story scale
         ctx.font = `700 76px Sora, system-ui, sans-serif`;
-        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-1px`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `0px`;
         ctx.fillStyle = C.ink;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('amigos que comparten',     CW / 2, 1250);
-        ctx.fillText('lo que amas',              CW / 2, 1350);
+        ctx.fillText('amigos que comparten',     CW / 2, 1320);
+        ctx.fillText('lo que amas',              CW / 2, 1410);
         ctx.restore();
       }
 
@@ -608,7 +634,7 @@ export const StoryCard = forwardRef<
         ctx.globalAlpha = 0.35;
         ctx.shadowColor = 'rgba(255,107,94,0.40)';
         ctx.shadowBlur  = 36;
-        drawO(ctx, layout.oCX, LOGO_CY, bR, LOGO_SW, 1, 0.001, true);
+        drawO(ctx, layout.oCX, layout.oCY, bR, LOGO_SW, 1, 0.001, true);
         ctx.restore();
       }
     };
@@ -629,7 +655,7 @@ export const StoryCard = forwardRef<
   }
 
   // ── Recording (8s sequence + 0.4s tail = 8400ms) ───────────────────────────
-  function recordVideo(canvas: HTMLCanvasElement): Promise<{ url: string; ext: string }> {
+  function recordVideo(canvas: HTMLCanvasElement): Promise<{ url: string; ext: string; blob: Blob }> {
     // Prefer H.264 mp4 (iOS Photos / IG Stories / WhatsApp friendly).
     // Try plain `video/mp4` first — iOS Safari MediaRecorder is happy without
     // an audio codec spec since we capture a video-only stream from canvas.
@@ -651,7 +677,7 @@ export const StoryCard = forwardRef<
     }
     const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
 
-    return new Promise<{ url: string; ext: string }>((resolve, reject) => {
+    return new Promise<{ url: string; ext: string; blob: Blob }>((resolve, reject) => {
       let stream: MediaStream;
       try { stream = canvas.captureStream(30); }
       catch (e) { reject(e); return; }
@@ -665,7 +691,7 @@ export const StoryCard = forwardRef<
       recorder.onstop = () => {
         const outType = (mimeType.split(';')[0]) || `video/${ext}`;
         const blob = new Blob(chunks, { type: outType });
-        const result = { url: URL.createObjectURL(blob), ext };
+        const result = { url: URL.createObjectURL(blob), ext, blob };
         resultRef.current = result;
         try { onReadyRef.current?.(); } catch {}
         resolve(result);
@@ -731,7 +757,7 @@ export const StoryCard = forwardRef<
       if (recordingRef.current) return recordingRef.current;
       // Otherwise (failure / never started), kick off a fresh recording
       const canvas = canvasRef.current;
-      if (!canvas) return Promise.resolve({ url: '', ext: 'webm' });
+      if (!canvas) return Promise.resolve({ url: '', ext: 'webm', blob: new Blob() });
       recordingRef.current = recordVideo(canvas);
       return recordingRef.current;
     },

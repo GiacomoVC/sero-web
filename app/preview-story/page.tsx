@@ -10,7 +10,7 @@ import { useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { StoryCard, type StoryCardHandle } from '@/components/quiz/StoryCard';
-import { shareVideoOrDownload } from '@/lib/shareVideo';
+import { shareVideoBlob } from '@/lib/shareVideo';
 
 function Inner() {
   const params = useSearchParams();
@@ -27,21 +27,21 @@ function Inner() {
     setTick((x) => x + 1);
   };
 
-  const share = async () => {
+  // Synchronous up to navigator.share() — see lib/shareVideo for rationale.
+  const share = () => {
     if (stage !== 'ready') return;
     const ready = cardRef.current?.getReadyVideo();
     if (!ready) return;
     setStage('sharing');
-    try {
-      await shareVideoOrDownload(ready.url, `sero-preview.${ready.ext}`, {
-        title: 'sero',
-        text:  'Únete a sero — amigos que comparten lo que amas',
-      });
-      setStage('done');
-      setTimeout(() => setStage('ready'), 2500);
-    } catch {
-      setStage('ready');
-    }
+    shareVideoBlob(ready.blob, ready.url, `sero-preview.${ready.ext}`, {
+      title: 'sero',
+      text:  'Únete a sero — amigos que comparten lo que amas',
+    })
+      .then(() => {
+        setStage('done');
+        setTimeout(() => setStage('ready'), 2500);
+      })
+      .catch(() => setStage('ready'));
   };
 
   return (
