@@ -318,29 +318,29 @@ function drawO(
 }
 
 // ─── Final logo geometry (canvas scale) ──────────────────────────────────────
-// Custom video-card variant: 'ser' rendered as a wordmark, and the 'o' (the
-// brand's signature graphic) floats ABOVE the 'r' as a halo / accent.
+// Wordmark layout (matches the website SVG logo). The O sits to the right of
+// 'ser' with a slight horizontal overlap. The O is drawn AFTER 'ser' so it
+// renders as a z-layer above the 'r' (the 'r' never visually crosses the O).
 const LOGO_FS  = 280;          // font size for "ser"
-const LOGO_R   = 64;           // O radius (smaller — floats as accent)
-const LOGO_SW  = 20;           // O stroke
-const LOGO_BASELINE = 1140;    // baseline of "ser"
-const LOGO_LSP = -8;           // mild letter-spacing for "ser"
+const LOGO_R   = 72;           // O radius
+const LOGO_SW  = 22;           // O stroke
+const LOGO_CY  = 1010;         // O center y (wordmark baseline = LOGO_CY + LOGO_R)
+const LOGO_LSP = -8;           // letter-spacing for "ser"
+
+// Horizontal offset from the visual end of 'ser' to the O center.
+// Positive = gap, negative = overlap. Matches the SVG ratio: in the SVG, the O
+// center sits ~6 viewBox units past the visual end of 'ser' (a small overlap).
+const LOGO_SER_O_OFFSET = -10;
 
 function logoLayout(ctx: CanvasRenderingContext2D) {
   ctx.font = `800 ${LOGO_FS}px Sora, system-ui, sans-serif`;
   (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${LOGO_LSP}px`;
-  const serW = ctx.measureText('ser').width;
-  const seW  = ctx.measureText('se').width;
-  // 'ser' centered horizontally on the canvas
-  const serX = (CW - serW) / 2;
-  // 'r' character spans visually from (serX + seW) to (serX + serW); take midpoint
-  const rCenterX = serX + (seW + serW) / 2;
-  // Cap-top of 'ser' (Sora cap-height ≈ 0.72 × em)
-  const capTop = LOGO_BASELINE - LOGO_FS * 0.72;
-  // 'o' floats with a small gap above the cap-top of 'r'
-  const oCX = rCenterX;
-  const oCY = capTop - LOGO_R * 0.55;
-  return { serX, oCX, oCY, baseline: LOGO_BASELINE, serW };
+  const serW   = ctx.measureText('ser').width;
+  const totalW = serW + LOGO_SER_O_OFFSET + LOGO_R * 2;
+  const serX   = (CW - totalW) / 2;
+  const oCX    = serX + serW + LOGO_SER_O_OFFSET + LOGO_R;
+  const baseline = LOGO_CY + LOGO_R;
+  return { serX, oCX, oCY: LOGO_CY, baseline, serW };
 }
 
 function drawSer(ctx: CanvasRenderingContext2D, x: number, baseline: number, alpha: number, glow = false) {
@@ -423,8 +423,8 @@ export const StoryCard = forwardRef<
       // Names that exceed the canvas width are truncated character-by-character
       // and an ellipsis is rendered on a SECOND LINE BELOW the name (so the
       // dots never interfere with the wordmark).
-      const NAME_TARGET_FS = 200;
-      const NAME_SMALL_FS  = 80;
+      const NAME_TARGET_FS = 180;
+      const NAME_SMALL_FS  = 72;
       const MAX_NAME_W     = CW - 200;
       const rawName        = firstName || 'amig@';
       ctx.save();
@@ -567,13 +567,15 @@ export const StoryCard = forwardRef<
         // Glow only while big & during glow flash at end of morph
         const glowFlash = t >= 6.30 && t < 6.55;
         const glow      = (morphP < 0.2) || glowFlash;
-        drawO(ctx, curCX, curCY, curR, curSW, bigDrawP, bigSoloA, glow);
 
-        // 'ser' starts off-left at x = -300, ends at layout.serX
+        // Z-ORDER: draw 'ser' FIRST, then the O on top — so the O renders as
+        // a layer above the 'r' and the 'r' never visually crosses into the
+        // O ring. (User: "que la O esté un layer por encima de ser".)
         if (serP > 0) {
           const serX = -300 + (layout.serX - (-300)) * serP;
           drawSer(ctx, serX, layout.baseline, serP, glowFlash);
         }
+        drawO(ctx, curCX, curCY, curR, curSW, bigDrawP, bigSoloA, glow);
       }
 
       // ── Phase 5: CTA HOLD (6.50 – 8.00s) ─────────────────────────────────
@@ -592,7 +594,7 @@ export const StoryCard = forwardRef<
         ctx.fillStyle = C.plum;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.translate(CW / 2, 540);
+        ctx.translate(CW / 2, 660);
         ctx.rotate((-2 * Math.PI) / 180);
         ctx.fillText('¿y tú?', 0, 0);
         ctx.restore();
@@ -606,7 +608,7 @@ export const StoryCard = forwardRef<
         ctx.fillStyle = C.inkSoft;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('únete a', CW / 2, 700);
+        ctx.fillText('únete a', CW / 2, 830);
         ctx.restore();
       }
 
@@ -619,8 +621,8 @@ export const StoryCard = forwardRef<
         ctx.fillStyle = C.ink;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('amigos que comparten',     CW / 2, 1320);
-        ctx.fillText('lo que amas',              CW / 2, 1410);
+        ctx.fillText('amigos que comparten',     CW / 2, 1250);
+        ctx.fillText('lo que amas',              CW / 2, 1345);
         ctx.restore();
       }
 
