@@ -6,7 +6,7 @@ import { StickerNote } from '@/components/ui/StickerNote';
 import { Highlight } from '@/components/ui/Highlight';
 import { Quiz } from '@/components/quiz/Quiz';
 import { ProcessSteps } from '@/components/landing/ProcessSteps';
-import { humanizeSlug } from '@/lib/humanize';
+import { firstNameFromSlug } from '@/lib/humanize';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ export default function ReferralPage({
   params: { slug: string };
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const friendName = humanizeSlug(params.slug);
+  const friendName = firstNameFromSlug(params.slug);
   const startQuiz = searchParams.start === '1';
 
   if (startQuiz) {
@@ -29,45 +29,47 @@ export default function ReferralPage({
   }
 
   return (
-    <main className="relative min-h-[100svh] flex flex-col items-center px-6 text-center bg-cream overflow-hidden py-16 sm:py-20">
+    <main className="relative h-[100svh] flex flex-col items-center px-4 text-center bg-cream overflow-hidden">
       <Confetti density="dense" />
 
-      {/* Floating sticker */}
+      {/* Floating sticker — desktop only */}
       <div className="hidden sm:block absolute top-24 right-[8%] z-10">
         <StickerNote color="butter" tilt={-6} arrow="down-left">
           te están<br />esperando →
         </StickerNote>
       </div>
 
-      <div className="relative z-10 fade-up">
-        <Logo width={220} priority />
+      {/* Top: logo + intro */}
+      <div className="relative z-10 flex flex-col items-center pt-6 sm:pt-16 fade-up">
+        <Logo width={160} className="sm:!w-[220px]" priority />
+        <p className="mt-5 sm:mt-8 text-ink/60 text-xs sm:text-sm uppercase tracking-[0.2em]">
+          Te invitó
+        </p>
+        <h1 className="mt-1 sm:mt-2 text-3xl sm:text-5xl font-black tracking-tight">
+          <Highlight variant="underline" color="coral">{friendName}</Highlight>
+        </h1>
       </div>
 
-      <p className="relative z-10 mt-8 text-ink/60 text-sm uppercase tracking-[0.2em] fade-up">
-        Te invitó
-      </p>
-      <h1 className="relative z-10 mt-2 text-4xl sm:text-5xl font-black tracking-tight fade-up">
-        <Highlight variant="underline" color="coral">{friendName}</Highlight>
-      </h1>
-
-      {/* Process steps (same as landing's section 3) */}
-      <div className="relative z-10 w-full mt-12 fade-up">
+      {/* Middle: process steps — auto-fills available vertical space */}
+      <div className="relative z-10 w-full my-auto fade-up">
         <ProcessSteps />
       </div>
 
-      <Link
-        href={`/${params.slug}?start=1`}
-        className="relative z-10 btn-primary mt-10 text-lg fade-up"
-      >
-        Empezar
-      </Link>
-
-      <Link
-        href={`/?ref=${encodeURIComponent(params.slug)}`}
-        className="relative z-10 btn-ghost mt-3 text-sm fade-up"
-      >
-        Conocer Sero
-      </Link>
+      {/* Bottom: CTAs */}
+      <div className="relative z-10 flex flex-col items-center pb-6 sm:pb-12 fade-up">
+        <Link
+          href={`/${params.slug}?start=1`}
+          className="btn-primary text-base sm:text-lg"
+        >
+          Empezar
+        </Link>
+        <Link
+          href={`/?ref=${encodeURIComponent(params.slug)}`}
+          className="btn-ghost mt-2 text-sm"
+        >
+          Conocer Sero
+        </Link>
+      </div>
     </main>
   );
 }

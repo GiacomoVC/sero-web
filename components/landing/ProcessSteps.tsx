@@ -2,8 +2,20 @@
  * Reusable "3-step process" cards. Used on the landing's SectionHow and on
  * the referral page (/[slug]/) so both stay visually in sync.
  */
+import { Highlight } from '@/components/ui/Highlight';
+import type { ReactNode } from 'react';
 
-export const PROCESS_STEPS = [
+type Step = {
+  num: string;
+  icon: string;
+  title: string;
+  body: ReactNode;
+  bubble: string;
+  accent: string;
+  highlighted?: boolean;
+};
+
+export const PROCESS_STEPS: Step[] = [
   {
     num:    '01',
     icon:   '✍️',
@@ -16,7 +28,13 @@ export const PROCESS_STEPS = [
     num:    '02',
     icon:   '📲',
     title:  'Mapea tu círculo',
-    body:   'Envía tu link. Encontramos amigos de amigos que comparten tus mundos.',
+    body:   (
+      <>
+        Envía tu link. Encontramos{' '}
+        <Highlight variant="underline" color="coral">amigos de amigos</Highlight>{' '}
+        que comparten tus mundos.
+      </>
+    ),
     bubble: 'bg-lavender',
     accent: 'text-[#5B2D82]',
     highlighted: true,
@@ -31,7 +49,7 @@ export const PROCESS_STEPS = [
   },
 ];
 
-export function StepCard({ step }: { step: typeof PROCESS_STEPS[number] }) {
+export function StepCard({ step }: { step: Step }) {
   return (
     <div className="snap-start shrink-0 w-[80vw] max-w-[300px] sm:w-auto sm:max-w-none rounded-3xl p-7 bg-white border border-ink/8 shadow-sm transition-transform hover:-translate-y-1">
       <span className={`text-5xl font-black block opacity-25 ${step.accent}`}>

@@ -59,7 +59,7 @@ export function ShareScreen({
     // promise resolves after the user dismisses the share sheet.
     // For WhatsApp the `text` becomes the message body. Instagram Stories
     // ignores `text` so IG is unaffected.
-    const waText = `${shareUrl}\n\nresponde y en <24hr tendrás nuevos planes 🥂👀 quizás conmigo`;
+    const waText = `${shareUrl}\n\nentre con mi link y en 24hrs tendrás mejores planes 🥂`;
     shareVideoBlob(
       ready.blob,
       ready.url,

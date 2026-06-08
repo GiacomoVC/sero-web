@@ -7,3 +7,10 @@ export function humanizeSlug(slug: string): string {
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(' ');
 }
+
+/** Returns just the first-name token from a slug. */
+export function firstNameFromSlug(slug: string): string {
+  const cleaned = slug.replace(/-\d+$/, '');
+  const first = cleaned.split('-').filter(Boolean)[0] ?? '';
+  return first.charAt(0).toUpperCase() + first.slice(1);
+}

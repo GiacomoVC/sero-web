@@ -23,8 +23,35 @@
 let _ctx: AudioContext | null = null;
 let _buffer: AudioBuffer | null = null;
 let _preloadPromise: Promise<void> | null = null;
+let _keepAlive: AudioBufferSourceNode | null = null;
 
 const AUDIO_URL = '/video-card-music.mp3';
+
+/**
+ * iOS Safari auto-suspends AudioContext after a few seconds of inactivity,
+ * even after resume(). To keep it alive between the quiz-Terminar click and
+ * the share screen mount (which can be 3-5s due to submit+navigate), we play
+ * a long silent buffer in a loop. Stopped when real audio kicks in.
+ */
+function startKeepAlive(ctx: AudioContext) {
+  if (_keepAlive) return;
+  try {
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 60, ctx.sampleRate);
+    const source = ctx.createBufferSource();
+    source.buffer = buf;
+    source.loop = true;
+    source.connect(ctx.destination);
+    source.start(0);
+    _keepAlive = source;
+  } catch { /* ignore */ }
+}
+
+function stopKeepAlive() {
+  if (_keepAlive) {
+    try { _keepAlive.stop(); } catch { /* ignore */ }
+    _keepAlive = null;
+  }
+}
 
 function getCtx(): AudioContext | null {
   if (_ctx) return _ctx;
@@ -54,6 +81,9 @@ export async function unlockAndPreload(): Promise<void> {
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
+      // Keep ctx alive across the quiz->share navigation so the soundtrack
+      // is audible during the live preview on mobile (iOS auto-suspends).
+      startKeepAlive(ctx);
       if (!_buffer) {
         const res = await fetch(AUDIO_URL);
         const ab = await res.arrayBuffer();
@@ -85,7 +115,17 @@ export function createAudioStreamForRecording(): {
 } | null {
   const ctx = _ctx;
   const buf = _buffer;
-  if (!ctx || !buf || ctx.state !== 'running') return null;
+  if (!ctx || !buf) return null;
+
+  // Defensive: try to resume if still suspended. Won't always succeed if
+  // gesture is gone, but doesn't hurt.
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+
+  // Stop the silent keep-alive so it doesn't fight the real audio.
+  stopKeepAlive();
+
   const source = ctx.createBufferSource();
   source.buffer = buf;
   const dest = ctx.createMediaStreamDestination();

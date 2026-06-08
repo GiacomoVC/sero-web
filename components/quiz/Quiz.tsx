@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Logo } from '../ui/Logo';
 import { ProgressBar } from './ProgressBar';
@@ -50,6 +50,41 @@ function emptyResponses(): QuizResponses {
   };
 }
 
+// ── Quiz state persistence (mobile refresh-safety) ──────────────────────────
+// Bump the version when QuizResponses' shape changes so stale data is dropped.
+const QUIZ_STORAGE_KEY = 'sero_quiz_state_v2';
+
+type SavedQuizState = {
+  q: QuizResponses;
+  stepIdx: number;
+  result: SubmitResult | null;
+};
+
+function loadSavedState(): SavedQuizState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SavedQuizState;
+  } catch {
+    return null;
+  }
+}
+
+function saveState(state: SavedQuizState) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* quota / disabled — fail silently */
+  }
+}
+
+function clearSavedState() {
+  if (typeof window === 'undefined') return;
+  try { window.localStorage.removeItem(QUIZ_STORAGE_KEY); } catch {}
+}
+
 export function Quiz({ referredBy }: { referredBy?: string }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -66,6 +101,35 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
   const [storyBlob, setStoryBlob] = useState<File | null>(null);
   const [storyReady, setStoryReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Restore quiz state from localStorage on first mount. Runs AFTER SSR to
+  // avoid hydration mismatch — for the first paint we render the empty form
+  // (or a transient null), then swap in the saved state.
+  useEffect(() => {
+    const saved = loadSavedState();
+    if (saved) {
+      setQ((prev) => ({ ...saved.q, referredBy: saved.q.referredBy ?? prev.referredBy }));
+      setStepIdx(saved.stepIdx);
+      if (saved.result) {
+        setResult(saved.result);
+        setStoryReady(true); // skip PreparingScreen — go straight to ShareScreen
+      }
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save on any change (debounced) so a refresh mid-quiz doesn't lose
+  // progress. Skipped before hydration to avoid clobbering the saved blob
+  // with the initial empty state.
+  useEffect(() => {
+    if (!hydrated) return;
+    const id = setTimeout(() => {
+      saveState({ q, stepIdx, result });
+    }, 400);
+    return () => clearTimeout(id);
+  }, [q, stepIdx, result, hydrated]);
 
   // Build the list of steps dynamically based on selected worlds
   const steps: Step[] = useMemo(() => {
@@ -209,6 +273,11 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       router.push('/');
     }
   };
+
+  // Avoid a flash of the empty quiz on mobile refresh while we hydrate the
+  // saved state from localStorage. Renders null briefly (the Suspense
+  // fallback wrapping <Quiz/> already provides a blank backdrop).
+  if (!hydrated) return null;
 
   if (result && storyReady) {
     return <ShareScreen result={result} firstName={q.firstName} initialBlob={storyBlob} />;
@@ -851,14 +920,15 @@ function ClosingStep({
   ];
   const expOpts: { id: ExpPreference; label: string }[] = [
     { id: 'solo_amigos', label: 'ir solo' },
-    { id: 'plus_one', label: 'llevar un +1' },
+    { id: 'plus_one',    label: 'llevar un +1' },
+    { id: 'cualquiera',  label: 'cualquiera' },
   ];
 
   return (
     <>
       <StepTitle title="Lo último." sub="Para armar planes que se sientan tuyos." />
 
-      <Field label="en una mesa con amigos de amigos, sueles">
+      <Field label="eres de">
         <div className="flex flex-wrap gap-2">
           {diningOpts.map((o) => (
             <button
