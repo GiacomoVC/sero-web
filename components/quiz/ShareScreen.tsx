@@ -2,6 +2,9 @@
 
 import { useRef, useState } from 'react';
 import { StoryCard, type StoryCardHandle } from './StoryCard';
+import { Confetti } from '../ui/Confetti';
+import { StickerNote } from '../ui/StickerNote';
+import { Highlight } from '../ui/Highlight';
 import type { SubmitResult } from '@/lib/types';
 
 export function ShareScreen({
@@ -68,31 +71,40 @@ export function ShareScreen({
   };
 
   return (
-    <div className="min-h-[100svh] bg-ink flex flex-col items-center px-6 py-10">
+    <div className="relative min-h-[100svh] bg-cream flex flex-col items-center px-6 py-10 overflow-hidden">
+      <Confetti density="dense" />
 
       {/* Title */}
-      <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white text-center mt-2">
-        ¡Listo, {firstName || 'amigo'}!
+      <h1 className="relative z-10 text-3xl sm:text-4xl font-black tracking-tight text-ink text-center mt-2">
+        ¡Listo,{' '}
+        <Highlight variant="underline" color="coral">{firstName || 'amigo'}</Highlight>!
       </h1>
 
-      {/* Animated card preview */}
-      <div className="mt-8 shrink-0 shadow-2xl rounded-3xl overflow-hidden">
-        <StoryCard
-          ref={cardRef}
-          firstName={firstName}
-          tags={tags}
-          shareUrl={shareUrl}
-        />
+      {/* Card + sticker cluster */}
+      <div className="relative z-10 mt-8 inline-block">
+        <div className="shrink-0 shadow-[0_24px_60px_-20px_rgba(91,45,130,0.35)] rounded-3xl overflow-hidden">
+          <StoryCard
+            ref={cardRef}
+            firstName={firstName}
+            tags={tags}
+            shareUrl={shareUrl}
+          />
+        </div>
+        <div className="hidden sm:block absolute -top-4 -right-24">
+          <StickerNote color="lavender" tilt={8} arrow="down-left">
+            ¡compártelo<br />ya! 🚀
+          </StickerNote>
+        </div>
       </div>
 
       {/* Nudge */}
-      <p className="mt-6 text-white/60 text-sm text-center max-w-xs">
+      <p className="relative z-10 mt-6 text-ink/60 text-sm text-center max-w-xs">
         Más amigos se suman, más rápido sale tu plan 🥂
       </p>
 
       {/* Progress bar (only during recording) */}
       {state === 'recording' && (
-        <div className="mt-4 w-full max-w-sm h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div className="relative z-10 mt-4 w-full max-w-sm h-1.5 bg-ink/10 rounded-full overflow-hidden">
           <div
             className="h-full bg-coral rounded-full transition-all duration-200"
             style={{ width: `${pct}%` }}
@@ -104,7 +116,7 @@ export function ShareScreen({
       <button
         onClick={handleDownload}
         disabled={state === 'recording'}
-        className="mt-4 btn-primary flex items-center gap-2.5 text-base disabled:opacity-70 disabled:cursor-wait"
+        className="relative z-10 mt-4 btn-primary flex items-center gap-2.5 text-base disabled:opacity-70 disabled:cursor-wait"
       >
         {state === 'recording' ? (
           <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
@@ -116,21 +128,21 @@ export function ShareScreen({
         {buttonLabel()}
       </button>
 
-      {/* Instructions — same size as button text, encouraging */}
-      <div className="mt-6 w-full max-w-sm space-y-3">
-        <p className="text-white/70 text-base font-medium leading-snug">
+      {/* Instructions */}
+      <div className="relative z-10 mt-6 w-full max-w-sm space-y-3">
+        <p className="text-ink/75 text-base font-medium leading-snug">
           1️⃣ &nbsp;Descarga y tu link se copia solo 🔗
         </p>
-        <p className="text-white/70 text-base font-medium leading-snug">
+        <p className="text-ink/75 text-base font-medium leading-snug">
           2️⃣ &nbsp;Sube el video a tu story y pega tu link como sticker 📲
         </p>
-        <p className="text-white/70 text-base font-medium leading-snug">
+        <p className="text-ink/75 text-base font-medium leading-snug">
           3️⃣ &nbsp;O envíalo por WhatsApp con tu link pegado 💬
         </p>
       </div>
 
       {/* Footer */}
-      <p className="mt-10 text-white/20 text-xs tracking-[0.3em] uppercase">
+      <p className="relative z-10 mt-10 text-ink/30 text-xs tracking-[0.3em] uppercase">
         Sero · {new Date().getFullYear()}
       </p>
     </div>
