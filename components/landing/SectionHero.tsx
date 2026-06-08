@@ -15,25 +15,6 @@ const ROTATION = [
   'Un libro',
 ];
 
-const TAGS = [
-  { label: 'Taylor Swift',        emoji: '🎵', color: 'peach',    dur: '6.8s', dx: '5px',  r: '-3deg'   },
-  { label: 'House of the Dragon', emoji: '🐉', color: 'lavender', dur: '8.2s', dx: '-4px', r: '2deg'    },
-  { label: 'Barça',               emoji: '⚽', color: 'butter',   dur: '7.5s', dx: '6px',  r: '-1deg'   },
-  { label: 'One Piece',           emoji: '🏴‍☠️', color: 'mint',     dur: '9.1s', dx: '-5px', r: '3deg'    },
-  { label: 'Succession',          emoji: '📺', color: 'sky',      dur: '6.4s', dx: '4px',  r: '-2deg'   },
-  { label: 'Coldplay',            emoji: '🎶', color: 'peach',    dur: '8.7s', dx: '-6px', r: '1.5deg'  },
-  { label: 'Murakami',            emoji: '📚', color: 'lavender', dur: '7.2s', dx: '5px',  r: '-3.5deg' },
-  { label: 'Fórmula 1',           emoji: '🏎️', color: 'butter',   dur: '9.4s', dx: '-3px', r: '2.5deg'  },
-] as const;
-
-const CHIP_BG: Record<typeof TAGS[number]['color'], string> = {
-  peach:    'bg-peach text-[#B33E2E] border-[#FFB8A6]/60',
-  lavender: 'bg-lavender text-[#5B2D82] border-[#C9B3E8]/60',
-  butter:   'bg-butter text-[#8A6A1A] border-[#F2CF6A]/60',
-  mint:     'bg-mint text-[#1F6E3C] border-[#A8D8B9]/60',
-  sky:      'bg-sky text-[#2A5685] border-[#A8C8E8]/60',
-};
-
 export function SectionHero() {
   const [i, setI] = useState(0);
 
@@ -98,22 +79,8 @@ export function SectionHero() {
           href="/quiz"
           className="btn-primary text-base mt-8 inline-flex"
         >
-          Convertirlo en un plan →
+          Convertirlo en un plan
         </Link>
-
-        {/* Floating interest chips — colorful */}
-        <div className="mt-14 flex flex-wrap gap-3 justify-center max-w-2xl mx-auto">
-          {TAGS.map((tag) => (
-            <span
-              key={tag.label}
-              className={`animate-float-tag inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold shadow-sm ${CHIP_BG[tag.color]}`}
-              style={{ ['--dur' as string]: tag.dur, ['--dx' as string]: tag.dx, ['--r' as string]: tag.r } as React.CSSProperties}
-            >
-              <span>{tag.emoji}</span>
-              <span>{tag.label}</span>
-            </span>
-          ))}
-        </div>
       </div>
 
       {/* Scroll arrow */}

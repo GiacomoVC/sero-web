@@ -3,21 +3,21 @@
 /**
  * Sero wordmark — SVG, three-part O.
  *
- * "ser"  →  Sora 500, near-black #18181B (ink)
- * "o"    →  open coral ring with gradient and detached segment
+ * "ser"  →  Sora 800 black, ink #18181B
+ * "o"    →  open coral ring (solid color) with detached segment
  *
  * Mount animation: O spins from 8 o'clock → 1 o'clock (0.8 s),
  * then shines exactly 1 s and stops.
  *
  * animKey: fires ripple + glint on each slot-machine tick.
  *
- * ── Geometry (R=10.5, SW=2.6) ──────────────────────────────────────────────
- *  C = 2π × 10.5 = 65.97
- *  Main arc: 315° → 57.72
- *  Gap 1:    18°  → 3.30
- *  Detached: 15°  → 2.75
- *  Gap 2:    12°  → 2.20
- *  strokeDasharray: "57.72 3.30 2.75 2.20"
+ * ── Geometry (R=11, SW=3.4) ────────────────────────────────────────────────
+ *  C = 2π × 11 = 69.12
+ *  Main arc: 315° → 60.48
+ *  Gap 1:    20°  → 3.84
+ *  Detached: 14°  → 2.69
+ *  Gap 2:    11°  → 2.11
+ *  strokeDasharray: "60.48 3.84 2.69 2.11"
  * ───────────────────────────────────────────────────────────────────────────
  */
 
@@ -36,16 +36,16 @@ const FONT = 42;       // font-size
 const BASE = 40;       // baseline y
 const TX   = 44;       // "ser" start x
 
-const CX   = 114;      // circle center x
+const CX   = 116;      // circle center x (nudged right for heavier weight)
 const CY   = 29;       // circle center y
-const R    = 10.5;
-const SW   = 2.6;      // stroke width
+const R    = 11;
+const SW   = 3.4;      // stroke width — heavier to match Sora 800
 
 // Three-part dasharray: main arc | gap1 | detached segment | gap2
-const DASH_MAIN  = 57.72;
-const GAP1       = 3.30;
-const DASH_SEG   = 2.75;
-const GAP2       = 2.20;
+const DASH_MAIN  = 60.48;
+const GAP1       = 3.84;
+const DASH_SEG   = 2.69;
+const GAP2       = 2.11;
 // ───────────────────────────────────────────────────────────────────────────
 
 export function Logo({
@@ -60,8 +60,8 @@ export function Logo({
   const glintCx = CX + R * 0.72;
   const glintCy = CY - R * 0.72;
 
-  const gradId  = 'sero-o-grad';
   const dashArr = `${DASH_MAIN} ${GAP1} ${DASH_SEG} ${GAP2}`;
+  const coral   = '#FF6B5E';
 
   return (
     <svg
@@ -75,33 +75,26 @@ export function Logo({
       aria-label="sero"
       role="img"
     >
-      <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#FF6B5E" />
-          <stop offset="100%" stopColor="#FF8A3D" />
-        </linearGradient>
-      </defs>
-
-      {/* "ser" — ink near-black */}
+      {/* "ser" — ink near-black, heavy weight */}
       <text
         x={TX}
         y={BASE}
-        fontFamily="Sora, system-ui, sans-serif"
-        fontWeight="500"
+        fontFamily="var(--font-sora), Sora, system-ui, sans-serif"
+        fontWeight="800"
         fontSize={FONT}
         fill="#18181B"
-        letterSpacing="-1.5"
+        letterSpacing="-2.2"
       >
         ser
       </text>
 
-      {/* "o" — gradient open ring with detached segment, three-part dasharray */}
+      {/* "o" — solid coral open ring with detached segment */}
       <circle
         id="o-ring"
         cx={CX}
         cy={CY}
         r={R}
-        stroke={`url(#${gradId})`}
+        stroke={coral}
         strokeWidth={SW}
         strokeDasharray={dashArr}
         strokeLinecap="round"
@@ -113,7 +106,7 @@ export function Logo({
         <circle
           key={`ring-${animKey}`}
           cx={CX} cy={CY} r={R}
-          stroke={`url(#${gradId})`}
+          stroke={coral}
           strokeWidth={SW * 0.45}
           strokeDasharray={dashArr}
           className="animate-o-ring-svg"
