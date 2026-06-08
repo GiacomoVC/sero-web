@@ -26,6 +26,8 @@ import type {
 } from '@/lib/types';
 import { ShareScreen } from './ShareScreen';
 import { PreparingScreen } from './PreparingScreen';
+import { Confetti } from '../ui/Confetti';
+import { StickerNote } from '../ui/StickerNote';
 
 type Step =
   | { kind: 'personal' }
@@ -207,20 +209,28 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
   }
 
   return (
-    <div className="min-h-[100svh] flex flex-col bg-cream">
-      <header className="px-6 pt-8 sm:pt-12 max-w-2xl w-full mx-auto">
+    <div className="relative min-h-[100svh] flex flex-col bg-cream overflow-hidden">
+      {/* Subtle confetti backdrop — light density so it doesn't distract */}
+      <Confetti density="light" className="opacity-70" />
+
+      <header className="relative z-10 px-6 pt-8 sm:pt-12 max-w-2xl w-full mx-auto">
         {current?.kind === 'personal' && (
-          <div className="flex flex-col items-center gap-3 mb-8">
+          <div className="relative flex flex-col items-center gap-3 mb-8">
             <Logo width={180} priority />
             <p className="text-ink/60 text-sm tracking-wide">
               Mismos gustos, mejores planes.
             </p>
+            <div className="hidden sm:block absolute -right-2 top-0">
+              <StickerNote color="peach" tilt={8} arrow="down-left">
+                empecemos<br />por ti ♡
+              </StickerNote>
+            </div>
           </div>
         )}
         <ProgressBar value={progress} />
       </header>
 
-      <main className="flex-1 px-6 py-10 max-w-2xl w-full mx-auto">
+      <main className="relative z-10 flex-1 px-6 py-10 max-w-2xl w-full mx-auto">
         <div key={stepIdx} className="animate-step-in">
           {current?.kind === 'personal' && (
             <PersonalStep q={q} update={update} />
@@ -237,7 +247,7 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
         )}
       </main>
 
-      <footer className="sticky bottom-0 bg-cream/90 backdrop-blur border-t border-ink/10 px-6 py-4">
+      <footer className="relative z-10 sticky bottom-0 bg-cream/90 backdrop-blur border-t border-ink/10 px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <button
             type="button"
