@@ -77,13 +77,6 @@ export function ShareScreen({
       .catch(() => setStage('ready'));
   };
 
-  const buttonLabel = () => {
-    if (stage === 'done')      return 'Listo · link copiado ✓';
-    if (stage === 'sharing')   return 'Abriendo…';
-    if (stage === 'preparing') return `Preparando tu video… ${pct}%`;
-    return 'Compartir mi video y copiar mi link';
-  };
-
   const buttonDisabled = stage === 'preparing' || stage === 'sharing';
 
   return (
@@ -117,19 +110,9 @@ export function ShareScreen({
         </div>
       </div>
 
-      {/* 24hr nudge — the new bit */}
-      <div className="relative z-10 mt-7 w-full max-w-sm rounded-2xl border border-coral/25 bg-white/70 backdrop-blur px-5 py-4 text-center">
-        <p className="text-ink text-base font-bold leading-snug">
-          En menos de 24hr te llega tu primera invitación a un plan 🥂
-        </p>
-        <p className="mt-1.5 text-ink/65 text-sm leading-snug">
-          Mientras más amig@s se sumen, mejor tu plan.
-        </p>
-      </div>
-
       {/* Progress bar (only while preparing) */}
       {stage === 'preparing' && (
-        <div className="relative z-10 mt-5 w-full max-w-sm h-1.5 bg-ink/10 rounded-full overflow-hidden">
+        <div className="relative z-10 mt-7 w-full max-w-sm h-1.5 bg-ink/10 rounded-full overflow-hidden">
           <div
             className="h-full bg-coral rounded-full transition-all duration-200"
             style={{ width: `${pct}%` }}
@@ -137,21 +120,31 @@ export function ShareScreen({
         </div>
       )}
 
-      {/* Share CTA */}
+      {/* Share CTA — minimal: share icon + "link" */}
       <button
         onClick={handleShare}
         disabled={buttonDisabled}
-        className="relative z-10 mt-4 btn-primary flex items-center gap-2.5 text-base disabled:opacity-70 disabled:cursor-wait"
+        aria-label="Compartir tu link"
+        className="relative z-10 mt-7 btn-primary flex items-center gap-2.5 text-base disabled:opacity-70 disabled:cursor-wait"
       >
-        {buttonDisabled ? (
+        {stage === 'done' ? (
+          <span className="text-lg leading-none">✓</span>
+        ) : buttonDisabled ? (
           <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
         ) : (
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0" aria-hidden>
-            <path d="M13 4a3 3 0 1 0-2.83 4H10a3 3 0 0 0-3 3v.17A3 3 0 1 0 8.83 13H9a3 3 0 1 0 0-2H8.83A3 3 0 0 0 7 8.83V9a3 3 0 0 0 3 3h.17A3 3 0 1 0 12 9.17V9a3 3 0 0 0-3-3h-.17A3 3 0 0 0 13 4z" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 shrink-0" aria-hidden>
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <polyline points="16 6 12 2 8 6" />
+            <line x1="12" y1="2" x2="12" y2="15" />
           </svg>
         )}
-        {buttonLabel()}
+        link
       </button>
+
+      {/* 24hr nudge — below the button */}
+      <p className="relative z-10 mt-6 max-w-sm text-center text-ink/80 text-base font-medium leading-snug">
+        y en &lt;24hr llegará tu primera invitación a un plan 🥂
+      </p>
 
       {/* Footer */}
       <p className="relative z-10 mt-10 text-ink/30 text-xs tracking-[0.3em] uppercase">
