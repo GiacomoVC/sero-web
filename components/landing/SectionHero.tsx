@@ -59,7 +59,7 @@ export function SectionHero({ refSlug }: { refSlug?: string }) {
         <h1 className="mt-12">
           <span className="block text-4xl sm:text-6xl font-black tracking-tight text-ink leading-[1.05]">
             Piensa en algo que{' '}
-            <Highlight variant="underline" color="plum">amas</Highlight>.
+            <Highlight variant="underline" color="plum">amas</Highlight>
           </span>
 
           <div className="mt-4 h-16 sm:h-24 flex items-center justify-center overflow-hidden">

@@ -134,67 +134,67 @@ type SuggestionsMap = Partial<
 export const SUGGESTIONS: SuggestionsMap = {
   musica: {
     'Pop': [
-      'Taylor Swift', 'Olivia Rodrigo', 'Sabrina Carpenter', 'Dua Lipa',
-      'Billie Eilish', 'The Weeknd', 'Harry Styles', 'Bruno Mars', 'Charli XCX',
+      'Taylor Swift', 'Sabrina Carpenter', 'Olivia Rodrigo',
+      'Dua Lipa', 'The Weeknd', 'Harry Styles',
     ],
     'Rock': [
-      'Coldplay', 'Arctic Monkeys', 'The Strokes', 'Imagine Dragons',
-      'Foo Fighters', 'Muse', 'Greta Van Fleet', 'Måneskin',
+      'Coldplay', 'Arctic Monkeys', 'The Strokes',
+      'Imagine Dragons', 'Foo Fighters', 'Måneskin',
     ],
     'Indie / alternativo': [
-      'Tame Impala', 'Mac DeMarco', 'Mitski', 'Phoebe Bridgers',
-      'beabadoobee', 'boygenius', 'Cuco', 'Clairo',
+      'Tame Impala', 'Mac DeMarco', 'Mitski',
+      'Phoebe Bridgers', 'Cuco', 'Clairo',
     ],
     'Electrónica': [
-      'Fred again..', 'Disclosure', 'Calvin Harris', 'Daft Punk',
-      'Skrillex', 'ODESZA', 'Bicep', 'Four Tet', 'Peggy Gou',
+      'Fred again..', 'Disclosure', 'Calvin Harris',
+      'Daft Punk', 'ODESZA', 'Peggy Gou',
     ],
     'Hip-hop / rap / urbano': [
-      'Drake', 'Kendrick Lamar', 'Tyler, the Creator', 'Travis Scott',
-      'Kanye West', 'J. Cole', 'Doja Cat', 'Ice Spice',
+      'Drake', 'Kendrick Lamar', 'Tyler, the Creator',
+      'Travis Scott', 'Doja Cat', 'J. Cole',
     ],
     'R&B / soul / jazz': [
-      'SZA', 'Frank Ocean', 'Steve Lacy', 'Daniel Caesar',
-      'H.E.R.', 'Norah Jones', 'Amy Winehouse',
+      'SZA', 'Frank Ocean', 'Steve Lacy',
+      'Daniel Caesar', 'H.E.R.', 'Amy Winehouse',
     ],
     'Latin': [
-      'Bad Bunny', 'Karol G', 'Rauw Alejandro', 'Feid', 'Peso Pluma',
-      'Rosalía', 'J Balvin', 'Maluma', 'Quevedo', 'Anuel AA',
+      'Bad Bunny', 'Karol G', 'Rauw Alejandro',
+      'Feid', 'Peso Pluma', 'Rosalía',
     ],
     'Salsa': [
-      'Héctor Lavoe', 'Rubén Blades', 'Marc Anthony', 'Willie Colón',
-      'Eddie Palmieri', 'Gilberto Santa Rosa', 'La Lupe', 'Frankie Ruiz',
+      'Héctor Lavoe', 'Rubén Blades', 'Marc Anthony',
+      'Willie Colón', 'Eddie Palmieri', 'Gilberto Santa Rosa',
     ],
     'K-pop': [
-      'BTS', 'BLACKPINK', 'NewJeans', 'TWICE', 'Stray Kids',
-      'LE SSERAFIM', 'ITZY', 'IVE', 'aespa',
+      'BTS', 'BLACKPINK', 'NewJeans',
+      'TWICE', 'Stray Kids', 'IVE',
     ],
     'Metal': [
-      'Metallica', 'Iron Maiden', 'Slipknot', 'Tool',
-      'System of a Down', 'Sleep Token', 'Gojira', 'Bring Me The Horizon',
+      'Metallica', 'Iron Maiden', 'Slipknot',
+      'Tool', 'System of a Down', 'Sleep Token',
     ],
     'Clásica': [
-      'Hans Zimmer', 'Ludovico Einaudi', 'Yiruma', 'Joe Hisaishi',
-      'Max Richter', 'Ólafur Arnalds', 'Beethoven',
+      'Hans Zimmer', 'Ludovico Einaudi', 'Yiruma',
+      'Joe Hisaishi', 'Max Richter', 'Ólafur Arnalds',
     ],
   },
 
   series: {
     'Drama': [
-      'Succession', 'The Bear', 'Breaking Bad', 'Better Call Saul',
-      'Mad Men', 'Yellowjackets', 'Fleabag', 'Euphoria', 'White Lotus',
+      'Succession', 'The Bear', 'Breaking Bad',
+      'Mad Men', 'Euphoria', 'White Lotus',
     ],
     'Comedia': [
-      'The Office', 'Brooklyn 99', 'Friends', 'Parks and Rec',
-      'Schitt\'s Creek', 'Abbott Elementary', 'Hacks', 'Ted Lasso',
+      'The Office', 'Brooklyn 99', 'Friends',
+      'Schitt\'s Creek', 'Ted Lasso', 'Hacks',
     ],
     'Sci-fi / fantasía': [
       'Stranger Things', 'The Last of Us', 'Game of Thrones',
-      'House of the Dragon', 'Severance', 'Andor', 'Loki', 'Dark',
+      'House of the Dragon', 'Severance', 'Loki',
     ],
     'Crimen / Thriller': [
-      'Narcos', 'Mindhunter', 'Money Heist', 'Ozark', 'You',
-      'Dahmer', 'Black Mirror', 'True Detective',
+      'Narcos', 'Money Heist', 'Ozark',
+      'You', 'Dahmer', 'Black Mirror',
     ],
     'Realities': [
       'Love Island', 'Love is Blind', 'The Bachelor',
@@ -205,27 +205,27 @@ export const SUGGESTIONS: SuggestionsMap = {
       'The Tinder Swindler', 'Don\'t F**k With Cats',
     ],
     'Acción / aventura': [
-      'Wednesday', 'Reacher', 'Peaky Blinders', 'Lupin',
+      'Wednesday', 'Peaky Blinders', 'Lupin',
       'The Boys', 'Jack Ryan', 'Vikings',
     ],
   },
 
   peliculas: {
     'Drama': [
-      'La La Land', 'Whiplash', 'Past Lives', 'Aftersun',
-      'Manchester by the Sea', 'Marriage Story', 'Anatomy of a Fall',
+      'La La Land', 'Whiplash', 'Past Lives',
+      'Aftersun', 'Marriage Story', 'Anatomy of a Fall',
     ],
     'Comedia': [
-      'Superbad', 'Bridesmaids', 'Easy A', 'Lady Bird',
-      'Anyone But You', 'The Holdovers', 'Booksmart',
+      'Superbad', 'Bridesmaids', 'Easy A',
+      'Lady Bird', 'The Holdovers', 'Booksmart',
     ],
     'Sci-fi / fantasía': [
-      'Dune', 'Interstellar', 'Inception', 'Blade Runner 2049',
-      'Everything Everywhere All at Once', 'Arrival', 'Oppenheimer',
+      'Dune', 'Interstellar', 'Inception',
+      'Blade Runner 2049', 'Everything Everywhere All at Once', 'Oppenheimer',
     ],
     'Crimen / Thriller': [
-      'Parasite', 'Gone Girl', 'Se7en', 'El Padrino',
-      'Pulp Fiction', 'Joker', 'The Departed',
+      'Parasite', 'Gone Girl', 'Se7en',
+      'El Padrino', 'Pulp Fiction', 'Joker',
     ],
     'Documentales / True Crime': [
       'My Octopus Teacher', 'Free Solo', 'The Social Dilemma',
@@ -239,47 +239,47 @@ export const SUGGESTIONS: SuggestionsMap = {
 
   anime: {
     'Shonen / acción': [
-      'One Piece', 'Naruto', 'Demon Slayer', 'Jujutsu Kaisen',
-      'My Hero Academia', 'Chainsaw Man', 'Bleach', 'Dragon Ball',
+      'One Piece', 'Naruto', 'Demon Slayer',
+      'Jujutsu Kaisen', 'My Hero Academia', 'Chainsaw Man',
     ],
     'Seinen / maduro': [
-      'Berserk', 'Vinland Saga', 'Vagabond', 'Monster',
-      'Tokyo Ghoul', 'Mushishi', '20th Century Boys',
+      'Berserk', 'Vinland Saga', 'Vagabond',
+      'Monster', 'Tokyo Ghoul', 'Mushishi',
     ],
     'Romance / slice of life': [
-      'Frieren', 'Spy x Family', 'Komi-san', 'Horimiya',
-      'Toradora', 'Your Lie in April', 'Fruits Basket',
+      'Frieren', 'Spy x Family', 'Komi-san',
+      'Horimiya', 'Toradora', 'Your Lie in April',
     ],
     'Fantasía / isekai': [
-      'Frieren', 'Re:Zero', 'Mushoku Tensei', 'Konosuba',
-      'Sword Art Online', 'Overlord', 'That Time I Got Reincarnated as a Slime',
+      'Frieren', 'Re:Zero', 'Mushoku Tensei',
+      'Konosuba', 'Sword Art Online', 'Overlord',
     ],
     'Deportes': [
-      'Haikyuu', 'Slam Dunk', 'Kuroko no Basket', 'Free!',
-      'Blue Lock', 'Ace of Diamond',
+      'Haikyuu', 'Slam Dunk', 'Kuroko no Basket',
+      'Free!', 'Blue Lock', 'Ace of Diamond',
     ],
     'Terror / psicológico': [
-      'Tokyo Ghoul', 'Death Note', 'Another', 'Higurashi',
-      'Junji Ito', 'Devilman Crybaby',
+      'Tokyo Ghoul', 'Death Note', 'Another',
+      'Higurashi', 'Junji Ito', 'Devilman Crybaby',
     ],
     'Clásicos': [
-      'Cowboy Bebop', 'Evangelion', 'Akira', 'Ghost in the Shell',
-      'Trigun', 'Samurai Champloo',
+      'Cowboy Bebop', 'Evangelion', 'Akira',
+      'Ghost in the Shell', 'Trigun', 'Samurai Champloo',
     ],
     'Studio Ghibli': [
       'Spirited Away', 'Princess Mononoke', 'Howl\'s Moving Castle',
-      'Mi Vecino Totoro', 'Kiki', 'El Castillo Vagabundo', 'Ponyo',
+      'Mi Vecino Totoro', 'Kiki', 'Ponyo',
     ],
   },
 
   libros: {
     'Ficción literaria': [
-      'Murakami', 'Bolaño', 'García Márquez', 'Sally Rooney',
-      'Cortázar', 'Vargas Llosa', 'Donna Tartt', 'Han Kang',
+      'Murakami', 'Bolaño', 'García Márquez',
+      'Sally Rooney', 'Cortázar', 'Vargas Llosa',
     ],
     'Fantasía': [
       'Brandon Sanderson', 'Tolkien', 'Patrick Rothfuss',
-      'Sarah J. Maas', 'George R.R. Martin', 'Robin Hobb', 'Neil Gaiman',
+      'Sarah J. Maas', 'George R.R. Martin', 'Neil Gaiman',
     ],
     'Sci-fi': [
       'Dune (Frank Herbert)', 'Liu Cixin', 'Isaac Asimov',
@@ -302,23 +302,23 @@ export const SUGGESTIONS: SuggestionsMap = {
       'Nietzsche', 'Han Kang', 'Maggie Nelson',
     ],
     'Poesía': [
-      'Neruda', 'Pizarnik', 'Idea Vilariño', 'Borges',
-      'Mary Oliver', 'Ocean Vuong',
+      'Neruda', 'Pizarnik', 'Idea Vilariño',
+      'Borges', 'Mary Oliver', 'Ocean Vuong',
     ],
     'No ficción / divulgación': [
-      'Sapiens', 'Atomic Habits', 'Educated', 'Bad Blood',
-      'The Body Keeps the Score', 'Outliers',
+      'Sapiens', 'Atomic Habits', 'Educated',
+      'Bad Blood', 'The Body Keeps the Score', 'Outliers',
     ],
   },
 
   videojuegos: {
     'RPG': [
-      'Elden Ring', 'Baldur\'s Gate 3', 'Witcher 3', 'Persona 5',
-      'Final Fantasy XVI', 'Dark Souls', 'Skyrim',
+      'Elden Ring', 'Baldur\'s Gate 3', 'Witcher 3',
+      'Persona 5', 'Final Fantasy XVI', 'Dark Souls',
     ],
     'Shooters / battle royale': [
-      'Fortnite', 'Valorant', 'Call of Duty', 'Apex Legends',
-      'PUBG', 'CS2', 'Overwatch',
+      'Fortnite', 'Valorant', 'Call of Duty',
+      'Apex Legends', 'CS2', 'Overwatch',
     ],
     'Estrategia': [
       'Civilization', 'Age of Empires', 'StarCraft',
@@ -341,7 +341,7 @@ export const SUGGESTIONS: SuggestionsMap = {
     ],
     'Indies': [
       'Hades', 'Stardew Valley', 'Hollow Knight',
-      'Celeste', 'Disco Elysium', 'Cuphead', 'Undertale',
+      'Celeste', 'Disco Elysium', 'Undertale',
     ],
     'Cozy / casual': [
       'Animal Crossing', 'Stardew Valley', 'Los Sims',

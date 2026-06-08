@@ -6,7 +6,7 @@ import { Highlight } from '@/components/ui/Highlight';
 export function SectionFinal({ refSlug }: { refSlug?: string } = {}) {
   const quizHref = refSlug ? `/quiz?ref=${encodeURIComponent(refSlug)}` : '/quiz';
   return (
-    <section className="relative bg-cream py-28 sm:py-36 px-6 text-center overflow-hidden">
+    <section className="relative bg-cream py-20 sm:py-28 px-6 text-center overflow-hidden">
       <Confetti density="dense" />
 
       {/* Soft blobs */}
@@ -20,12 +20,9 @@ export function SectionFinal({ refSlug }: { refSlug?: string } = {}) {
       />
 
       <div className="relative z-10 max-w-2xl mx-auto">
-        <p className="text-sm font-bold tracking-widest text-coral uppercase">
-          ¿Listo?
-        </p>
-        <h2 className="text-4xl sm:text-6xl font-black text-ink tracking-tight leading-[1.05] mt-4">
+        <h2 className="text-4xl sm:text-6xl font-black text-ink tracking-tight leading-[1.05]">
           La gente que buscas{' '}
-          <Highlight variant="underline" color="plum">ya está buscándote</Highlight>.
+          <Highlight variant="underline" color="plum">ya está buscándote</Highlight>
         </h2>
         <p className="text-ink/60 text-lg mt-6 leading-relaxed">
           Sero conecta personas a través de amigos y mundos compartidos.

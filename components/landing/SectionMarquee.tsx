@@ -43,15 +43,12 @@ export function SectionMarquee() {
   const row2 = [...ROW2_ITEMS, ...ROW2_ITEMS];
 
   return (
-    <section className="relative bg-cream py-20 overflow-hidden border-y border-ink/5">
+    <section className="relative bg-cream py-14 overflow-hidden border-y border-ink/5">
       <Confetti density="light" />
 
       <div className="relative z-10 text-center mb-10 px-6">
-        <p className="text-sm font-bold tracking-widest text-coral uppercase">
-          Lo que ya está aquí
-        </p>
-        <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-ink mt-3">
-          Tus mundos ahora tienen un lugar.
+        <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-ink">
+          Tus mundos ahora tienen un lugar
         </h2>
 
         {/* Floating sticker, right-aligned */}

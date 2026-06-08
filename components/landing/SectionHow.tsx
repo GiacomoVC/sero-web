@@ -4,17 +4,14 @@ import { ProcessSteps } from './ProcessSteps';
 
 export function SectionHow() {
   return (
-    <section className="relative bg-cream py-24 sm:py-32 overflow-hidden">
+    <section className="relative bg-cream py-20 sm:py-24 overflow-hidden">
       <Confetti density="light" />
 
       {/* Heading */}
-      <div className="relative z-10 text-center mb-14 px-6">
-        <p className="text-sm font-bold tracking-widest text-coral uppercase">
-          El proceso
-        </p>
-        <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-ink mt-3">
+      <div className="relative z-10 text-center mb-12 px-6">
+        <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-ink">
           Así de{' '}
-          <Highlight variant="underline" color="coral">simple</Highlight>.
+          <Highlight variant="underline" color="coral">simple</Highlight>
         </h2>
       </div>
 
