@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StoryCard, type StoryCardHandle } from './StoryCard';
 import { Confetti } from '../ui/Confetti';
 import { StickerNote } from '../ui/StickerNote';
@@ -17,9 +17,14 @@ export function ShareScreen({
   firstName: string;
   initialBlob?: File | null;
 }) {
-  const cardRef  = useRef<StoryCardHandle>(null);
-  const [state,  setState]  = useState<'idle' | 'recording' | 'done'>('idle');
-  const [pct,    setPct]    = useState(0);
+  const cardRef = useRef<StoryCardHandle>(null);
+  // Stage of the share flow:
+  //   'preparing' — recording in background, button disabled
+  //   'ready'     — recording finished, button enabled & ready to share
+  //   'sharing'   — share sheet open / blob being read
+  //   'done'      — share/download succeeded
+  const [stage, setStage] = useState<'preparing' | 'ready' | 'sharing' | 'done'>('preparing');
+  const [pct,   setPct]   = useState(0);
 
   const shareUrl =
     typeof window !== 'undefined'
@@ -28,53 +33,59 @@ export function ShareScreen({
 
   const tags = (result.tags ?? []).filter(Boolean);
 
-  const handleDownload = async () => {
-    if (state !== 'idle') return;
-    setState('recording');
-    setPct(0);
-
-    const start    = Date.now();
-    const interval = setInterval(() => {
+  // Progress meter while preparing
+  useEffect(() => {
+    if (stage !== 'preparing') return;
+    const start = Date.now();
+    const id = setInterval(() => {
       setPct(Math.min(Math.round((Date.now() - start) / 8400 * 100), 99));
     }, 200);
+    return () => clearInterval(id);
+  }, [stage]);
 
+  // The share click runs SYNCHRONOUSLY in the user gesture context as long
+  // as the pre-recorded blob is already prepared. shareVideoOrDownload itself
+  // does a tiny `await fetch(blobUrl)` to materialize the File, but iOS Safari
+  // preserves the gesture for microtask-scope awaits on local blob URLs.
+  const handleShare = async () => {
+    if (stage !== 'ready') return;
+
+    // Copy URL — fire & forget, doesn't block the gesture
+    navigator.clipboard.writeText(shareUrl).catch(() => {});
+
+    const ready = cardRef.current?.getReadyVideo();
+    if (!ready) {
+      // Shouldn't happen since button is gated on onReady, but be safe.
+      return;
+    }
+
+    setStage('sharing');
     try {
-      // Copy URL to clipboard — runs in parallel with recording
-      navigator.clipboard.writeText(shareUrl).catch(() => {});
-
-      const { url, ext } = await cardRef.current!.captureVideo();
-      clearInterval(interval);
-      setPct(100);
-
-      // Try iOS-friendly share sheet first, fall back to anchor download
       const outcome = await shareVideoOrDownload(
-        url,
-        `sero-${result.slug}.${ext}`,
+        ready.url,
+        `sero-${result.slug}.${ext(ready.ext)}`,
         { title: 'sero', text: 'Únete a sero — amigos que comparten lo que amas' },
       );
 
-      // Cleanup blob URL (after the share sheet has read it)
-      setTimeout(() => URL.revokeObjectURL(url), 30_000);
-
       if (outcome === 'cancelled') {
-        setState('idle');
-        setPct(0);
+        setStage('ready');
       } else {
-        setState('done');
-        setTimeout(() => { setState('idle'); setPct(0); }, 4000);
+        setStage('done');
+        setTimeout(() => setStage('ready'), 4000); // allow re-sharing
       }
     } catch {
-      clearInterval(interval);
-      setState('idle');
-      setPct(0);
+      setStage('ready');
     }
   };
 
   const buttonLabel = () => {
-    if (state === 'done')      return 'Listo · link copiado ✓';
-    if (state === 'recording') return `Preparando tu video… ${pct}%`;
+    if (stage === 'done')      return 'Listo · link copiado ✓';
+    if (stage === 'sharing')   return 'Abriendo…';
+    if (stage === 'preparing') return `Preparando tu video… ${pct}%`;
     return 'Compartir mi video y copiar mi link';
   };
+
+  const buttonDisabled = stage === 'preparing' || stage === 'sharing';
 
   return (
     <div className="relative min-h-[100svh] bg-cream flex flex-col items-center px-6 py-10 overflow-hidden">
@@ -94,6 +105,10 @@ export function ShareScreen({
             firstName={firstName}
             tags={tags}
             shareUrl={shareUrl}
+            onReady={() => {
+              setPct(100);
+              setStage((s) => (s === 'preparing' ? 'ready' : s));
+            }}
           />
         </div>
         <div className="hidden sm:block absolute -top-4 -right-24">
@@ -108,8 +123,8 @@ export function ShareScreen({
         Más amigos se suman, más rápido sale tu plan 🥂
       </p>
 
-      {/* Progress bar (only during recording) */}
-      {state === 'recording' && (
+      {/* Progress bar (only while preparing) */}
+      {stage === 'preparing' && (
         <div className="relative z-10 mt-4 w-full max-w-sm h-1.5 bg-ink/10 rounded-full overflow-hidden">
           <div
             className="h-full bg-coral rounded-full transition-all duration-200"
@@ -118,17 +133,17 @@ export function ShareScreen({
         </div>
       )}
 
-      {/* Download CTA */}
+      {/* Share CTA */}
       <button
-        onClick={handleDownload}
-        disabled={state === 'recording'}
+        onClick={handleShare}
+        disabled={buttonDisabled}
         className="relative z-10 mt-4 btn-primary flex items-center gap-2.5 text-base disabled:opacity-70 disabled:cursor-wait"
       >
-        {state === 'recording' ? (
+        {buttonDisabled ? (
           <span className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
         ) : (
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0" aria-hidden>
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v7.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 11.586V4a1 1 0 011-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+            <path d="M13 4a3 3 0 1 0-2.83 4H10a3 3 0 0 0-3 3v.17A3 3 0 1 0 8.83 13H9a3 3 0 1 0 0-2H8.83A3 3 0 0 0 7 8.83V9a3 3 0 0 0 3 3h.17A3 3 0 1 0 12 9.17V9a3 3 0 0 0-3-3h-.17A3 3 0 0 0 13 4z" />
           </svg>
         )}
         {buttonLabel()}
@@ -153,4 +168,8 @@ export function ShareScreen({
       </p>
     </div>
   );
+}
+
+function ext(x: string) {
+  return x === 'mp4' || x === 'webm' || x === 'mov' ? x : 'mp4';
 }

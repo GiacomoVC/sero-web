@@ -19,26 +19,28 @@ function Inner() {
     .split(',').map((s) => s.trim()).filter(Boolean);
 
   const cardRef = useRef<StoryCardHandle>(null);
-  const [state, setState] = useState<'idle' | 'recording' | 'done'>('idle');
+  const [stage, setStage] = useState<'preparing' | 'ready' | 'sharing' | 'done'>('preparing');
   const [tick, setTick] = useState(0);
 
-  const restart = () => setTick((x) => x + 1);
+  const restart = () => {
+    setStage('preparing');
+    setTick((x) => x + 1);
+  };
 
-  const record = async () => {
-    if (!cardRef.current) return;
-    setState('recording');
+  const share = async () => {
+    if (stage !== 'ready') return;
+    const ready = cardRef.current?.getReadyVideo();
+    if (!ready) return;
+    setStage('sharing');
     try {
-      const { url, ext } = await cardRef.current.captureVideo();
-      await shareVideoOrDownload(url, `sero-preview.${ext}`, {
+      await shareVideoOrDownload(ready.url, `sero-preview.${ready.ext}`, {
         title: 'sero',
         text:  'Únete a sero — amigos que comparten lo que amas',
       });
-      // delay revoke so the share sheet finishes reading the blob
-      setTimeout(() => URL.revokeObjectURL(url), 30_000);
-      setState('done');
-      setTimeout(() => setState('idle'), 2500);
+      setStage('done');
+      setTimeout(() => setStage('ready'), 2500);
     } catch {
-      setState('idle');
+      setStage('ready');
     }
   };
 
@@ -48,15 +50,37 @@ function Inner() {
       <p style={{ opacity: 0.7, fontSize: 13 }}>name: <code>{name}</code> · tags: <code>{tags.join(' · ')}</code></p>
 
       <div key={tick} style={{ marginTop: 8, borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 60px -20px rgba(0,0,0,0.6)' }}>
-        <StoryCard ref={cardRef} firstName={name} tags={tags} shareUrl="" />
+        <StoryCard
+          ref={cardRef}
+          firstName={name}
+          tags={tags}
+          shareUrl=""
+          onReady={() => setStage((s) => (s === 'preparing' ? 'ready' : s))}
+        />
       </div>
 
       <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
         <button onClick={restart} style={{ padding: '10px 18px', borderRadius: 999, background: '#FF6B5E', color: 'white', border: 0, fontWeight: 600, cursor: 'pointer' }}>
           ↻ Reproducir de nuevo
         </button>
-        <button onClick={record} disabled={state === 'recording'} style={{ padding: '10px 18px', borderRadius: 999, background: 'white', color: '#18181B', border: 0, fontWeight: 600, cursor: 'pointer', opacity: state === 'recording' ? 0.5 : 1 }}>
-          {state === 'recording' ? 'Grabando…' : state === 'done' ? 'Listo ✓' : 'Compartir / descargar'}
+        <button
+          onClick={share}
+          disabled={stage !== 'ready'}
+          style={{
+            padding: '10px 18px',
+            borderRadius: 999,
+            background: 'white',
+            color: '#18181B',
+            border: 0,
+            fontWeight: 600,
+            cursor: stage === 'ready' ? 'pointer' : 'wait',
+            opacity: stage === 'ready' ? 1 : 0.5,
+          }}
+        >
+          {stage === 'preparing' ? 'Preparando…' :
+           stage === 'sharing'   ? 'Abriendo…'   :
+           stage === 'done'      ? 'Listo ✓'    :
+           'Compartir / descargar'}
         </button>
       </div>
 

@@ -208,6 +208,9 @@ function drawChip(
   ctx.scale(scale, scale);
 
   ctx.font = `700 ${fontSize}px Sora, system-ui, sans-serif`;
+  // IMPORTANT: ctx.letterSpacing is NOT included in canvas save/restore state,
+  // so it bleeds across draw calls. Explicitly reset to normal here.
+  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `0px`;
   ctx.textBaseline = 'middle';
   ctx.textAlign    = 'left';
   const fitted = fitText(ctx, text, 760);
@@ -352,19 +355,33 @@ function drawSer(ctx: CanvasRenderingContext2D, x: number, baseline: number, alp
 
 // ─── Public handle ───────────────────────────────────────────────────────────
 export interface StoryCardHandle {
+  /** Returns the pre-recorded blob URL synchronously if ready, else awaits it. */
   captureVideo(): Promise<{ url: string; ext: string }>;
+  /** Synchronous accessor for the pre-recorded result (or null while recording). */
+  getReadyVideo(): { url: string; ext: string } | null;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export const StoryCard = forwardRef<
   StoryCardHandle,
-  { firstName: string; tags: string[]; shareUrl: string }
+  {
+    firstName: string;
+    tags: string[];
+    shareUrl: string;
+    /** Fires once the background recording is finalized & blob is ready. */
+    onReady?: () => void;
+  }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
->(function StoryCard({ firstName, tags, shareUrl: _shareUrl }, ref) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef    = useRef<number>();
-  const startRef  = useRef<number>(0);
-  const drawFnRef = useRef<(ctx: CanvasRenderingContext2D, t: number) => void>(() => {});
+>(function StoryCard({ firstName, tags, shareUrl: _shareUrl, onReady }, ref) {
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const rafRef       = useRef<number>();
+  const startRef     = useRef<number>(0);
+  const drawFnRef    = useRef<(ctx: CanvasRenderingContext2D, t: number) => void>(() => {});
+  // Pre-recording infrastructure
+  const recordingRef = useRef<Promise<{ url: string; ext: string }> | null>(null);
+  const resultRef    = useRef<{ url: string; ext: string } | null>(null);
+  const onReadyRef   = useRef<typeof onReady>(onReady);
+  onReadyRef.current = onReady;
 
   // Up to 6 displayable tags. Fallback to generic worlds if user has fewer.
   const FALLBACK = ['música', 'series', 'películas', 'libros', 'deportes', 'anime'];
@@ -375,6 +392,10 @@ export const StoryCard = forwardRef<
 
   useEffect(() => {
     drawFnRef.current = (ctx: CanvasRenderingContext2D, t: number) => {
+      // Reset sticky state that survives save/restore (ctx.letterSpacing
+      // is not in the canvas spec's save/restore list and bleeds between frames).
+      (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `0px`;
+
       // ── Background ──────────────────────────────────────────────────────
       ctx.fillStyle = C.cream;
       ctx.fillRect(0, 0, CW, CH);
@@ -392,8 +413,19 @@ export const StoryCard = forwardRef<
       //   - 4.6-5.0: fades out during sweep
       const nameLargeY  = 920;
       const nameSmallY  = 380;
-      const nameLargeFS = 280;
-      const nameSmallFS = 96;
+      // Adaptive sizing: start at the target size and shrink to fit names
+      // up to ~9 letters cleanly inside the canvas.
+      const NAME_TARGET_FS = 240;
+      const NAME_SMALL_FS  = 84;
+      ctx.save();
+      ctx.font = `800 ${NAME_TARGET_FS}px Sora, system-ui, sans-serif`;
+      (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-2px`;
+      const measured = ctx.measureText(firstName || 'amig@').width;
+      ctx.restore();
+      const MAX_NAME_W = CW - 200;
+      const fitScale = measured > MAX_NAME_W ? MAX_NAME_W / measured : 1;
+      const nameLargeFS = Math.floor(NAME_TARGET_FS * fitScale);
+      const nameSmallFS = Math.floor(NAME_SMALL_FS  * fitScale);
 
       const shrinkP = eInOut(il(1.4, 1.8, t));
       const nameY   = nameLargeY  + (nameSmallY  - nameLargeY)  * shrinkP;
@@ -406,6 +438,7 @@ export const StoryCard = forwardRef<
         ctx.save();
         ctx.globalAlpha = headA;
         ctx.font = `700 110px Caveat, "Caveat Brush", cursive`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `0px`;
         ctx.fillStyle = C.plum;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -422,7 +455,7 @@ export const StoryCard = forwardRef<
         ctx.save();
         ctx.globalAlpha = nameA;
         ctx.font = `800 ${nameFS}px Sora, system-ui, sans-serif`;
-        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-3px`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-2px`;
         ctx.fillStyle = C.ink;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -530,6 +563,7 @@ export const StoryCard = forwardRef<
         ctx.globalAlpha = ctaTopA;
         // "¿y tú?" caveat, plum, slight tilt
         ctx.font = `700 170px Caveat, "Caveat Brush", cursive`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `0px`;
         ctx.fillStyle = C.plum;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -542,6 +576,7 @@ export const StoryCard = forwardRef<
         ctx.save();
         ctx.globalAlpha = ctaTopA;
         ctx.font = `600 76px Sora, system-ui, sans-serif`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `0px`;
         ctx.fillStyle = C.inkSoft;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -593,104 +628,115 @@ export const StoryCard = forwardRef<
     rafRef.current = requestAnimationFrame(loop);
   }
 
+  // ── Recording (8s sequence + 0.4s tail = 8400ms) ───────────────────────────
+  function recordVideo(canvas: HTMLCanvasElement): Promise<{ url: string; ext: string }> {
+    // Prefer H.264 mp4 (iOS Photos / IG Stories / WhatsApp friendly).
+    // Try plain `video/mp4` first — iOS Safari MediaRecorder is happy without
+    // an audio codec spec since we capture a video-only stream from canvas.
+    const candidates = [
+      'video/mp4',
+      'video/mp4;codecs=avc1',
+      'video/mp4;codecs=avc1.42E01F',
+      'video/mp4;codecs=h264',
+      'video/webm;codecs=h264',
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+    ];
+    let mimeType = '';
+    for (const m of candidates) {
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) {
+        mimeType = m; break;
+      }
+    }
+    const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
+
+    return new Promise<{ url: string; ext: string }>((resolve, reject) => {
+      let stream: MediaStream;
+      try { stream = canvas.captureStream(30); }
+      catch (e) { reject(e); return; }
+
+      const opts: MediaRecorderOptions = mimeType
+        ? { mimeType, videoBitsPerSecond: 6_000_000 }
+        : { videoBitsPerSecond: 6_000_000 };
+      const recorder = new MediaRecorder(stream, opts);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const outType = (mimeType.split(';')[0]) || `video/${ext}`;
+        const blob = new Blob(chunks, { type: outType });
+        const result = { url: URL.createObjectURL(blob), ext };
+        resultRef.current = result;
+        try { onReadyRef.current?.(); } catch {}
+        resolve(result);
+      };
+      recorder.onerror = (e) => reject(e);
+
+      // Restart animation from t=0 so the recording captures the full sequence,
+      // then wait 2 paint frames so the first chunk isn't blank.
+      startAnim(canvas);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        try {
+          recorder.start(100);
+          setTimeout(() => {
+            if (recorder.state !== 'inactive') recorder.stop();
+          }, 8400);
+        } catch (e) { reject(e); }
+      }));
+    });
+  }
+
+  // ── Mount: load fonts, start the animation AND pre-record in background ────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // Wait for the actual font families we use in canvas — not just
-    // document.fonts.ready, which can resolve before swap fonts arrive.
+
     const fontsReady = (typeof document !== 'undefined' && document.fonts)
       ? Promise.all([
-          document.fonts.load('800 280px Sora'),
-          document.fonts.load('700 96px  Sora'),
+          document.fonts.load('800 240px Sora'),
+          document.fonts.load('800 100px Sora'),
           document.fonts.load('700 80px  Sora'),
+          document.fonts.load('600 76px  Sora'),
           document.fonts.load('700 170px Caveat'),
           document.fonts.load('700 110px Caveat'),
         ]).catch(() => undefined)
       : Promise.resolve();
-    fontsReady.then(() => startAnim(canvas));
+
+    fontsReady.then(() => {
+      if (!canvasRef.current) return;
+      // Kick off the pre-recording. startAnim is called inside recordVideo.
+      // The user watches the live preview WHILE the recording runs in parallel,
+      // so by the time they click "share" the blob is already prepared and
+      // navigator.share() runs inside the user-gesture context.
+      if (!recordingRef.current) {
+        recordingRef.current = recordVideo(canvas).catch(() => {
+          // Recording failed — clear the ref so a manual captureVideo() can retry
+          recordingRef.current = null;
+          resultRef.current = null;
+          throw new Error('recording-failed');
+        });
+      }
+    });
+
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Video capture (8s sequence + 0.4s tail = 8400ms record) ────────────────
+  // ── Imperative handle ──────────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
     captureVideo() {
+      // If pre-recorded already, return synchronously (gesture-context safe)
+      if (resultRef.current) return Promise.resolve(resultRef.current);
+      // If a pre-recording is in flight, await it
+      if (recordingRef.current) return recordingRef.current;
+      // Otherwise (failure / never started), kick off a fresh recording
       const canvas = canvasRef.current;
       if (!canvas) return Promise.resolve({ url: '', ext: 'webm' });
-
-      // Robust mime selection: prefer H.264 mp4 (plays in iOS Photos, IG Stories,
-      // WhatsApp DMs). Fall back through codec families until something works.
-      const candidates = [
-        'video/mp4;codecs=avc1.42E01F,mp4a.40.2', // H.264 Baseline + AAC
-        'video/mp4;codecs=avc1.640028',            // H.264 High
-        'video/mp4;codecs=avc1',
-        'video/mp4;codecs=h264',
-        'video/mp4',
-        'video/webm;codecs=h264',
-        'video/webm;codecs=vp9',
-        'video/webm;codecs=vp8',
-        'video/webm',
-      ];
-      let mimeType = '';
-      for (const m of candidates) {
-        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) {
-          mimeType = m;
-          break;
-        }
-      }
-      const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-
-      return new Promise<{ url: string; ext: string }>((resolve, reject) => {
-        let stream: MediaStream;
-        try {
-          stream = canvas.captureStream(30);
-        } catch (e) { reject(e); return; }
-
-        const opts: MediaRecorderOptions = mimeType
-          ? { mimeType, videoBitsPerSecond: 6_000_000 } // 6 Mbps — sharp at 1080×1920
-          : { videoBitsPerSecond: 6_000_000 };
-        const recorder = new MediaRecorder(stream, opts);
-        const chunks: Blob[] = [];
-        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-        recorder.onstop = () => {
-          const outType = (mimeType.split(';')[0]) || `video/${ext}`;
-          const blob = new Blob(chunks, { type: outType });
-          resolve({ url: URL.createObjectURL(blob), ext });
-        };
-        recorder.onerror = (e) => reject(e);
-
-        // 1) Force Sora + Caveat to actually be loaded for canvas use.
-        //    (next/font's hashed family isn't visible to canvas; the Google
-        //    Fonts <link> in app/layout.tsx exposes the plain family names
-        //    used here — but we still must await them.)
-        const fontsReady = (typeof document !== 'undefined' && document.fonts)
-          ? Promise.all([
-              document.fonts.load('800 280px Sora'),
-              document.fonts.load('700 96px  Sora'),
-              document.fonts.load('700 80px  Sora'),
-              document.fonts.load('600 76px  Sora'),
-              document.fonts.load('700 170px Caveat'),
-              document.fonts.load('700 110px Caveat'),
-            ]).catch(() => undefined)
-          : Promise.resolve();
-
-        fontsReady.then(() => {
-          // 2) Restart animation, then wait for two paint frames so the recorder
-          //    never captures a blank first chunk (otherwise iOS can show
-          //    black/empty).
-          startAnim(canvas);
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              try {
-                recorder.start(100);
-                setTimeout(() => {
-                  if (recorder.state !== 'inactive') recorder.stop();
-                }, 8400);
-              } catch (e) { reject(e); }
-            });
-          });
-        });
-      });
+      recordingRef.current = recordVideo(canvas);
+      return recordingRef.current;
+    },
+    getReadyVideo() {
+      return resultRef.current;
     },
   }));
 
