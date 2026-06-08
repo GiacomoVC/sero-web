@@ -138,12 +138,12 @@ export function ShareScreen({
             <line x1="12" y1="2" x2="12" y2="15" />
           </svg>
         )}
-        link
+        compartir
       </button>
 
-      {/* 24hr nudge — below the button */}
+      {/* Nudge below the button */}
       <p className="relative z-10 mt-6 max-w-sm text-center text-ink/80 text-base font-medium leading-snug">
-        y en &lt;24hr llegará tu primera invitación a un plan 🥂
+        comparte y en ~24hrs estarás invitad@ a tu primer plan
       </p>
 
       {/* Footer */}
