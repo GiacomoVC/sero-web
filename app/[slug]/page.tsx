@@ -5,6 +5,7 @@ import { Confetti } from '@/components/ui/Confetti';
 import { StickerNote } from '@/components/ui/StickerNote';
 import { Highlight } from '@/components/ui/Highlight';
 import { Quiz } from '@/components/quiz/Quiz';
+import { ProcessSteps } from '@/components/landing/ProcessSteps';
 import { humanizeSlug } from '@/lib/humanize';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,7 @@ export default function ReferralPage({
   }
 
   return (
-    <main className="relative min-h-[100svh] flex flex-col items-center justify-center px-6 text-center bg-cream overflow-hidden">
+    <main className="relative min-h-[100svh] flex flex-col items-center px-6 text-center bg-cream overflow-hidden py-16 sm:py-20">
       <Confetti density="dense" />
 
       {/* Floating sticker */}
@@ -49,10 +50,10 @@ export default function ReferralPage({
         <Highlight variant="underline" color="coral">{friendName}</Highlight>
       </h1>
 
-      <p className="relative z-10 mt-8 max-w-xl text-lg sm:text-xl text-ink/80 fade-up">
-        Cuéntanos lo que amas y armemos planes con tus amigos —{' '}
-        <span className="text-plum font-semibold">mismos gustos, mejores planes.</span>
-      </p>
+      {/* Process steps (same as landing's section 3) */}
+      <div className="relative z-10 w-full mt-12 fade-up">
+        <ProcessSteps />
+      </div>
 
       <Link
         href={`/${params.slug}?start=1`}
