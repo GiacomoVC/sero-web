@@ -15,8 +15,9 @@ const ROTATION = [
   'Un libro',
 ];
 
-export function SectionHero() {
+export function SectionHero({ refSlug }: { refSlug?: string }) {
   const [i, setI] = useState(0);
+  const quizHref = refSlug ? `/quiz?ref=${encodeURIComponent(refSlug)}` : '/quiz';
 
   useEffect(() => {
     const id = setInterval(() => setI((prev) => (prev + 1) % ROTATION.length), 1250);
@@ -76,7 +77,7 @@ export function SectionHero() {
           <Highlight variant="marker" color="coral">un plan</Highlight>?
         </p>
         <Link
-          href="/quiz"
+          href={quizHref}
           className="btn-primary text-base mt-8 inline-flex"
         >
           Convertirlo en un plan

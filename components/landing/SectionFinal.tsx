@@ -3,7 +3,8 @@ import { Confetti } from '@/components/ui/Confetti';
 import { StickerNote } from '@/components/ui/StickerNote';
 import { Highlight } from '@/components/ui/Highlight';
 
-export function SectionFinal() {
+export function SectionFinal({ refSlug }: { refSlug?: string } = {}) {
+  const quizHref = refSlug ? `/quiz?ref=${encodeURIComponent(refSlug)}` : '/quiz';
   return (
     <section className="relative bg-cream py-28 sm:py-36 px-6 text-center overflow-hidden">
       <Confetti density="dense" />
@@ -42,7 +43,7 @@ export function SectionFinal() {
 
         <div className="mt-10">
           <Link
-            href="/quiz"
+            href={quizHref}
             className="btn-primary text-lg animate-pulse-ring inline-flex"
           >
             Encontrar a mi gente →

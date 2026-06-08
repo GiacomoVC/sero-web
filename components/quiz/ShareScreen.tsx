@@ -57,14 +57,14 @@ export function ShareScreen({
     setStage('sharing');
     // shareVideoBlob is synchronous up to navigator.share() — the returned
     // promise resolves after the user dismisses the share sheet.
-    // For WhatsApp the `text` becomes the message body — we want the user's
-    // personalized share URL there (not a marketing line). Instagram Stories
-    // ignores `text`, so this doesn't affect IG.
+    // For WhatsApp the `text` becomes the message body — URL + a short
+    // follow-up nudge. Instagram Stories ignores `text` so IG is unaffected.
+    const waText = `${shareUrl}\n\nresponde y en <24hr tendrás nuevos planes 🥂👀 quizás conmigo`;
     shareVideoBlob(
       ready.blob,
       ready.url,
       `sero-${result.slug}.${ready.ext}`,
-      { title: 'sero', text: shareUrl },
+      { title: 'sero', text: waText },
     )
       .then((outcome) => {
         if (outcome === 'cancelled') {

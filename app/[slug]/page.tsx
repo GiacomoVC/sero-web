@@ -62,7 +62,7 @@ export default function ReferralPage({
       </Link>
 
       <Link
-        href="/"
+        href={`/?ref=${encodeURIComponent(params.slug)}`}
         className="relative z-10 btn-ghost mt-3 text-sm fade-up"
       >
         Conocer Sero
