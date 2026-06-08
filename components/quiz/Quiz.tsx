@@ -221,8 +221,8 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
               Mismos gustos, mejores planes.
             </p>
             <div className="hidden sm:block absolute -right-2 top-0">
-              <StickerNote color="peach" tilt={8} arrow="down-left">
-                empecemos<br />por ti ♡
+              <StickerNote color="butter" tilt={8} arrow="down-left">
+                empezamos<br />por ti →
               </StickerNote>
             </div>
           </div>

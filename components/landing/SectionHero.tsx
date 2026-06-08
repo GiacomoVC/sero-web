@@ -59,8 +59,8 @@ export function SectionHero() {
 
       {/* Floating sticker top-right (hidden on small) */}
       <div className="hidden sm:block absolute top-28 right-[7%] z-20">
-        <StickerNote color="lavender" tilt={-6} arrow="down-left">
-          tus pasiones<br />merecen vivirse ♡
+        <StickerNote color="butter" tilt={-6} arrow="down-left">
+          esto va<br />contigo →
         </StickerNote>
       </div>
 

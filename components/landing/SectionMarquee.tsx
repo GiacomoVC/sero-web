@@ -56,8 +56,8 @@ export function SectionMarquee() {
 
         {/* Floating sticker, right-aligned */}
         <div className="hidden sm:block absolute -top-2 right-[6%]">
-          <StickerNote color="peach" tilt={6} arrow="down-left">
-            todo lo<br />que amas ♡
+          <StickerNote color="mint" tilt={6} arrow="down-left">
+            todo<br />cuenta *
           </StickerNote>
         </div>
       </div>

@@ -33,8 +33,8 @@ export default function ReferralPage({
 
       {/* Floating sticker */}
       <div className="hidden sm:block absolute top-24 right-[8%] z-10">
-        <StickerNote color="lavender" tilt={-6} arrow="down-left">
-          tu amig@<br />te quiere aquí ♡
+        <StickerNote color="butter" tilt={-6} arrow="down-left">
+          te están<br />esperando →
         </StickerNote>
       </div>
 

@@ -91,7 +91,7 @@ export function ShareScreen({
           />
         </div>
         <div className="hidden sm:block absolute -top-4 -right-24">
-          <StickerNote color="lavender" tilt={8} arrow="down-left">
+          <StickerNote color="mint" tilt={8} arrow="down-left">
             ¡compártelo<br />ya! 🚀
           </StickerNote>
         </div>

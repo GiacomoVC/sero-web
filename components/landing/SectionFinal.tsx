@@ -34,8 +34,8 @@ export function SectionFinal() {
         <div className="relative mt-12 mb-4 inline-block">
           <Polaroid />
           <div className="absolute -top-6 -right-10 sm:-right-16 hidden sm:block">
-            <StickerNote color="lavender" tilt={8} arrow="down-left">
-              tu gente<br />ya está aquí ♡
+            <StickerNote color="butter" tilt={8} arrow="down-left">
+              tu gente<br />ya está acá →
             </StickerNote>
           </div>
         </div>
@@ -71,7 +71,7 @@ function Polaroid() {
       {/* Washi tape */}
       <span
         aria-hidden
-        className="absolute -top-3 left-1/2 -translate-x-1/2 rotate-[-6deg] w-20 h-6 bg-lavender/80 border border-white/60 shadow-sm"
+        className="absolute -top-3 left-1/2 -translate-x-1/2 rotate-[-6deg] w-20 h-6 bg-butter/80 border border-white/60 shadow-sm"
       />
       <div
         className="w-56 h-56 sm:w-64 sm:h-64 rounded-sm overflow-hidden relative"
@@ -86,7 +86,7 @@ function Polaroid() {
         </div>
       </div>
       <p className="mt-3 font-hand text-2xl text-plum/80">
-        amigos de amigos ♡
+        amigos de amigos
       </p>
     </div>
   );
