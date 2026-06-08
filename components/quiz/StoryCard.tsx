@@ -2,63 +2,46 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
-// ─── Canvas resolution ────────────────────────────────────────────────────────
+// ─── Canvas resolution (1080×1920 portrait, IG story format) ─────────────────
 const CW = 1080;
 const CH = 1920;
 
-// ─── O ring — phase 2-4 (70% of original r=210) ──────────────────────────────
-const O_CX = CW / 2;   // horizontally centered
-const O_CY = 730;      // upper area — where the title text was
-const O_R  = 147;      // 210 × 0.70
-const O_SW = 21;       // 30  × 0.70
-// Gap at 1 o'clock; 315° main | 18° gap1 | 15° detached | 12° gap2
-const O_START_DEG  = -24;
-const O_MAIN_DEG   = 315;
-const O_GAP1_DEG   = 18;
-const O_DETACH_DEG = 15;
+// ─── Palette (mirrors the website) ───────────────────────────────────────────
+const C = {
+  cream:    '#FAF8F5',
+  ink:      '#18181B',
+  inkSoft:  'rgba(24,24,27,0.72)',
+  coral:    '#FF6B5E',
+  plum:     '#5B2D82',
+  gold:     '#FFD166',
+  orange:   '#FF8A3D',
+  lilac:    '#B78BB8',
+  mintDot:  '#7FCFA0',
+  peach:    '#FFD9CF', peachTx: '#B33E2E', peachBd: 'rgba(179,62,46,0.20)',
+  butter:   '#FFE9B0', butTx:   '#8A6A1A', butBd:   'rgba(138,106,26,0.20)',
+  mint:     '#D4ECDD', minTx:   '#1F6E3C', minBd:   'rgba(31,110,60,0.20)',
+  sky:      '#D7E8F7', skyTx:   '#2A5685', skyBd:   'rgba(42,86,133,0.20)',
+  lavender: '#E9DCF6', lavTx:   '#5B2D82', lavBd:   'rgba(91,45,130,0.20)',
+};
 
-// ─── O ring — final position (phase 5, slides down to screen center) ─────────
-const O_CY_FINAL = 880;
+// ─── Easing ──────────────────────────────────────────────────────────────────
+const clamp  = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const il     = (a: number, b: number, t: number) => clamp((t - a) / (b - a), 0, 1);
+const eOut   = (t: number) => 1 - (1 - t) ** 3;
+const eInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2);
+const eBack  = (t: number) => {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
+};
 
-// ─── Phase-0 chip labels (pre-made content, not user data) ────────────────────
-const P0_LABELS = ['🎶 música', '📺 series', 'deporte', '🎬 películas', '💥 anime', '📚 libros'];
-
-// Tracks: startX (neg = left edge, >CW = right edge), yFrac, dir (+1=L→R / -1=R→L), delay, dur
-const P0_TRACKS = [
-  { sX: -460, yF: 0.24, d:  1, dl: 0.00, dr: 5.2 },
-  { sX: CW+60, yF: 0.37, d: -1, dl: 0.28, dr: 5.0 },
-  { sX: -460, yF: 0.52, d:  1, dl: 0.55, dr: 5.4 },
-  { sX: CW+60, yF: 0.64, d: -1, dl: 0.12, dr: 5.1 },
-  { sX: -460, yF: 0.76, d:  1, dl: 0.42, dr: 4.8 },
-  { sX: CW+60, yF: 0.43, d: -1, dl: 0.70, dr: 5.3 },
-];
-
-// ─── User interest chips — below O ring (4 chips, 2 col × 2 row) ─────────────
-// ax = anchor x (right-edge for align:'right', left-edge for align:'left')
-const P2_LAYOUT = [
-  { align: 'right' as const, ax: 520, y: O_CY + O_R + 130, from: 'left'  },
-  { align: 'left'  as const, ax: 560, y: O_CY + O_R + 130, from: 'right' },
-  { align: 'right' as const, ax: 520, y: O_CY + O_R + 295, from: 'left'  },
-  { align: 'left'  as const, ax: 560, y: O_CY + O_R + 295, from: 'right' },
-];
-
-// ─── Spark colors ─────────────────────────────────────────────────────────────
-const SPARK_COLS = ['#FF6B5E', '#FF8A3D', '#FFD166', '#FF6B5E', '#FF8A3D'];
-
-// ─── Math helpers ─────────────────────────────────────────────────────────────
-const deg   = (d: number) => (d * Math.PI) / 180;
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-const il    = (a: number, b: number, v: number) => clamp((v - a) / (b - a), 0, 1);
-const eoc   = (t: number) => 1 - (1 - t) ** 3;
-const eio   = (t: number) => t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
-
-// ─── Rounded rect ─────────────────────────────────────────────────────────────
+// ─── Rounded rect ────────────────────────────────────────────────────────────
 function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
-  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y,     x + w, y + r,     r);
-  ctx.lineTo(x + w, y + h - r);                    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);                        ctx.arcTo(x,     y + h, x,     y + h - r, r);
-  ctx.lineTo(x,     y + r);                        ctx.arcTo(x,     y,     x + r, y,         r);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y,     x + w, y + r,     r);
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h); ctx.arcTo(x,     y + h, x,     y + h - r, r);
+  ctx.lineTo(x,     y + r); ctx.arcTo(x,     y,     x + r, y,         r);
   ctx.closePath();
 }
 
@@ -69,475 +52,540 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxPx: number): st
   return s + '…';
 }
 
-// ─── Background + blobs ───────────────────────────────────────────────────────
-// Blobs are static in phases 0-4, then gently animate from t=6.5 onward
-function drawBg(ctx: CanvasRenderingContext2D, t = 0) {
-  ctx.fillStyle = '#FAF8F5';
-  ctx.fillRect(0, 0, CW, CH);
+// ─── Confetti backdrop ───────────────────────────────────────────────────────
+type Shape = 'squiggle' | 'asterisk' | 'dot' | 'stick' | 'ring' | 'plus' | 'triangle';
+interface Piece { shape: Shape; color: string; x: number; y: number; s: number; r: number; ph: number; }
 
-  const bt  = Math.max(0, t - 6.5);  // blob-time: starts moving at phase 5
-  const amp = Math.min(bt / 1.0, 1); // smooth ramp-in so blobs don't jump
+const CONF: Piece[] = [
+  { shape: 'squiggle', color: C.coral,  x: 110,  y: 240,  s: 64, r: -12, ph: 0.0 },
+  { shape: 'asterisk', color: C.plum,   x: 950,  y: 320,  s: 54, r: 14,  ph: 0.8 },
+  { shape: 'dot',      color: C.gold,   x: 540,  y: 160,  s: 26, r: 0,   ph: 1.6 },
+  { shape: 'stick',    color: C.mintDot,x: 170,  y: 540,  s: 60, r: -28, ph: 0.3 },
+  { shape: 'ring',     color: C.coral,  x: 930,  y: 700,  s: 46, r: 8,   ph: 1.1 },
+  { shape: 'plus',     color: C.orange, x: 100,  y: 880,  s: 40, r: 16,  ph: 2.2 },
+  { shape: 'squiggle', color: C.plum,   x: 970,  y: 1080, s: 60, r: 22,  ph: 0.6 },
+  { shape: 'triangle', color: C.coral,  x: 80,   y: 1500, s: 36, r: -10, ph: 1.4 },
+  { shape: 'asterisk', color: C.gold,   x: 220,  y: 1320, s: 50, r: 0,   ph: 0.2 },
+  { shape: 'dot',      color: C.coral,  x: 820,  y: 1480, s: 22, r: 0,   ph: 1.8 },
+  { shape: 'stick',    color: C.plum,   x: 940,  y: 1720, s: 56, r: 34,  ph: 0.9 },
+  { shape: 'ring',     color: C.orange, x: 150,  y: 1760, s: 36, r: 0,   ph: 2.0 },
+  { shape: 'squiggle', color: C.gold,   x: 700,  y: 80,   s: 56, r: 18,  ph: 1.3 },
+  { shape: 'plus',     color: C.plum,   x: 60,   y: 1180, s: 36, r: -20, ph: 2.5 },
+  { shape: 'dot',      color: C.orange, x: 360,  y: 700,  s: 22, r: 0,   ph: 0.5 },
+  { shape: 'asterisk', color: C.coral,  x: 900,  y: 1320, s: 46, r: 8,   ph: 1.9 },
+  { shape: 'triangle', color: C.mintDot,x: 1000, y: 1480, s: 30, r: 24,  ph: 2.3 },
+  { shape: 'ring',     color: C.lilac,  x: 740,  y: 1640, s: 42, r: 0,   ph: 0.4 },
+];
 
-  const b1x = (CW - 120) + Math.sin(bt * 1.4) * 120 * amp;
-  const b1y = -100        + Math.cos(bt * 1.0) *  80 * amp;
-  const g1  = ctx.createRadialGradient(b1x, b1y, 0, b1x, b1y, 720);
-  g1.addColorStop(0, 'rgba(255,107,94,0.26)'); g1.addColorStop(1, 'rgba(255,107,94,0)');
-  ctx.fillStyle = g1; ctx.fillRect(0, 0, CW, CH);
-
-  const b2x = -80 + Math.sin(bt * 0.9 + 1.0) *  80 * amp;
-  const b2y = CH  + Math.cos(bt * 1.2 + 0.5) * 100 * amp;
-  const g2  = ctx.createRadialGradient(b2x, b2y, 0, b2x, b2y, 620);
-  g2.addColorStop(0, 'rgba(91,45,130,0.16)'); g2.addColorStop(1, 'rgba(91,45,130,0)');
-  ctx.fillStyle = g2; ctx.fillRect(0, 0, CW, CH);
-}
-
-// ─── O ring ───────────────────────────────────────────────────────────────────
-function drawOring(
-  ctx: CanvasRenderingContext2D,
-  cx: number, cy: number, r: number, sw: number,
-  progress: number,         // 0→1 draw-in fraction
-  alpha = 1, glow = false,
-) {
-  if (alpha <= 0 || progress <= 0) return;
-  const C       = 2 * Math.PI * r;
-  const mainLen = (O_MAIN_DEG   / 360) * C;
-  const detLen  = (O_DETACH_DEG / 360) * C;
-  const drawn   = progress * (mainLen + detLen);
-  const a0 = deg(O_START_DEG);
-  const a1 = a0 + deg(O_MAIN_DEG);
-  const a2 = a1 + deg(O_GAP1_DEG);
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  if (glow) { ctx.shadowColor = 'rgba(255,107,94,0.55)'; ctx.shadowBlur = 52; }
-  const gr = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
-  gr.addColorStop(0, '#FF6B5E'); gr.addColorStop(1, '#FF8A3D');
-  ctx.strokeStyle = gr; ctx.lineWidth = sw; ctx.lineCap = 'round';
-
-  const md = Math.min(drawn, mainLen);
-  if (md > 0) { ctx.beginPath(); ctx.arc(cx, cy, r, a0, a0 + (md / C) * 2 * Math.PI, false); ctx.stroke(); }
-  if (drawn > mainLen) {
-    const dd = Math.min(drawn - mainLen, detLen);
-    ctx.beginPath(); ctx.arc(cx, cy, r, a2, a2 + (dd / C) * 2 * Math.PI, false); ctx.stroke();
+function drawShape(ctx: CanvasRenderingContext2D, p: Piece) {
+  const s = p.s;
+  ctx.strokeStyle = p.color;
+  ctx.fillStyle   = p.color;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  switch (p.shape) {
+    case 'squiggle':
+      ctx.lineWidth = s * 0.16;
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.5, 0);
+      ctx.quadraticCurveTo(-s * 0.27, -s * 0.36, 0, 0);
+      ctx.quadraticCurveTo( s * 0.27,  s * 0.36, s * 0.5, 0);
+      ctx.stroke();
+      break;
+    case 'asterisk':
+      ctx.lineWidth = s * 0.14;
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo( Math.cos(a) * s * 0.5,  Math.sin(a) * s * 0.5);
+        ctx.lineTo(-Math.cos(a) * s * 0.5, -Math.sin(a) * s * 0.5);
+        ctx.stroke();
+      }
+      break;
+    case 'dot':
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2); ctx.fill();
+      break;
+    case 'stick': {
+      const w = s * 0.24, h = s;
+      rr(ctx, -w / 2, -h / 2, w, h, w / 2); ctx.fill();
+      break;
+    }
+    case 'ring':
+      ctx.lineWidth = s * 0.18;
+      ctx.beginPath(); ctx.arc(0, 0, s * 0.42, 0, Math.PI * 2); ctx.stroke();
+      break;
+    case 'plus':
+      ctx.lineWidth = s * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.5); ctx.lineTo(0, s * 0.5);
+      ctx.moveTo(-s * 0.5, 0); ctx.lineTo(s * 0.5, 0);
+      ctx.stroke();
+      break;
+    case 'triangle':
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.5);
+      ctx.lineTo( s * 0.5, s * 0.4);
+      ctx.lineTo(-s * 0.5, s * 0.4);
+      ctx.closePath(); ctx.fill();
+      break;
   }
-  ctx.restore();
 }
 
-// ─── Pill chip ────────────────────────────────────────────────────────────────
-function drawChip(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, text: string,
-  alpha = 1, align: 'left' | 'right' = 'left',
-  maxText = 400, fontSize = 44, glowColor?: string,
-) {
+function drawConfetti(ctx: CanvasRenderingContext2D, t: number, alpha: number) {
   if (alpha <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.font = `600 ${fontSize}px Sora, sans-serif`;
-  const fitted = fitText(ctx, text, maxText);
-  const tw = ctx.measureText(fitted).width;
-  const pX = 36, pY = 24, cW = tw + pX * 2, cH = fontSize + pY * 2, cr = cH / 2;
-  const lx = align === 'left' ? x : x - cW;
-  const ly = y - cH / 2;
-
-  if (glowColor) { ctx.shadowColor = glowColor; ctx.shadowBlur = 52; }
-  ctx.fillStyle = 'white'; rr(ctx, lx, ly, cW, cH, cr); ctx.fill();
-  ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
-  ctx.strokeStyle = 'rgba(24,24,27,0.09)'; ctx.lineWidth = 2; rr(ctx, lx, ly, cW, cH, cr); ctx.stroke();
-  ctx.fillStyle = '#18181B'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-  ctx.fillText(fitted, lx + pX, y);
-  ctx.restore();
-}
-
-// ─── Wordmark: "ser" slides in from left to align with the O ring ─────────────
-// oCX/oCY: current O center (the O is drawn separately; this just draws "ser")
-// serProg: 0 = "ser" off left edge, 1 = in position
-function drawSer(
-  ctx: CanvasRenderingContext2D,
-  oCX: number, oCY: number, oR: number,
-  serProg: number, alpha = 1, glow = false,
-) {
-  if (alpha <= 0) return;
-  // Font size derived so that the O radius looks proportional to the logo
-  // In the logo: r/fontSize ≈ 10.5/42 = 0.25. So fontSize = oR / 0.25
-  const fSize   = Math.round(oR / 0.25);      // e.g. r=147 → 588 … too big
-  // Actually use the same ratio as the SVG logo (VH=46, r=10.5 → r is ~0.23×VH, text 42px)
-  // For a clean proportional match: fontSize = oR * (42 / 10.5) = oR * 4
-  const fs = Math.round(oR * 4);              // 147 × 4 = 588 — also huge for the card
-  // Let's cap it. The original logo at display size: font=42, r=10.5. Scale by oR/10.5:
-  const scale   = oR / 10.5;
-  const fSizePx = Math.round(42 * scale);     // 42 × 14 = 588 — still big
-  // That's 1080-canvas scale. The "ser" text in the logo is 42px at display = 168px at 4× canvas.
-  // At canvas scale the O is r=147 = 10.5 × 14. So fontSize should be 42 × 14 = 588? No...
-  // Original logo: viewBox 170×46, r=10.5, fontSize=42 → displayed at ~110px wide = 440px canvas
-  // At 440px canvas width, scale = 440/170 = 2.59 → fontSize = 42×2.59 = 109 canvas px, r=10.5×2.59=27
-  // But O_R=147 here. Scale relative to r: 147/27 = 5.44 → fontSize = 109×5.44 = 593. Still big.
-  // Actually, we do NOT want the logo-sized "ser" to match a 147px-radius O.
-  // The O here is MUCH larger than a logo O. "ser" should visually form a LOGO, not a giant display.
-  // The user said the O ring is 70% of the original card size, but the LOGO version should still
-  // have the correct logo proportions. Let's draw the complete logo at a fixed sensible size centered
-  // where the O is — same as what we had before: fSize=168 canvas px.
-  const lFSize  = 168;
-  const baseline = oCY + lFSize * 0.365; // O center aligns with cap-height midpoint
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.font = `500 ${lFSize}px Sora, sans-serif`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign    = 'left';
-
-  const serW  = ctx.measureText('ser').width;
-  const oGap  = 12;
-  const logoR = lFSize * 0.25;                // logo-O radius at this font size ≈ 42px
-  const logoSW = lFSize * 0.062;              // proportional stroke width
-  const totalW = serW + oGap + logoR * 2;
-  const logoX  = (CW - totalW) / 2;
-
-  // Slide "ser" from left
-  const offX = (1 - eoc(serProg)) * -(logoX + serW + 300);
-
-  if (glow) { ctx.shadowColor = 'rgba(255,107,94,0.55)'; ctx.shadowBlur = 50; }
-  ctx.fillStyle = 'rgba(24,24,27,1)';
-  ctx.fillText('ser', logoX + offX, baseline);
-  ctx.restore();
-
-  // Logo-sized O ring (replaces the big canvas O once fully assembled)
-  const logoCX = logoX + serW + oGap + logoR;
-  const logoCY = baseline - lFSize * 0.365;
-  drawOring(ctx, logoCX, logoCY, logoR, logoSW, 1, alpha, glow);
-}
-
-// ─── Spark particles ──────────────────────────────────────────────────────────
-interface Particle { x: number; y: number; vx: number; vy: number; r: number; color: string; dl: number; life: number; }
-
-function seedParticles(cx: number, cy: number): Particle[] {
-  // Deterministic-ish but visually random
-  return Array.from({ length: 30 }, (_, i) => {
-    const angle = (i / 30) * Math.PI * 2 + (i % 3) * 0.4;
-    const speed = 500 + (i % 5) * 180;
-    return {
-      x: cx + Math.cos(angle + 0.7) * 140,
-      y: cy + Math.sin(angle + 0.3) * 80,
-      vx: Math.cos(angle) * speed * (0.7 + (i % 4) * 0.15),
-      vy: Math.sin(angle) * speed * (0.7 + (i % 4) * 0.15) - 200,
-      r:  8 + (i % 5) * 5,
-      color: SPARK_COLS[i % SPARK_COLS.length],
-      dl:   (i % 6) * 0.06,
-      life: 0.5 + (i % 4) * 0.22,
-    };
-  });
-}
-
-function drawSparks(ctx: CanvasRenderingContext2D, particles: Particle[], age: number) {
-  for (const p of particles) {
-    const a = age - p.dl;
-    if (a < 0 || a > p.life) continue;
-    const frac  = a / p.life;
-    const alpha = 1 - frac;
-    const px    = p.x + p.vx * a;
-    const py    = p.y + p.vy * a + 280 * a * a;  // gentle gravity
-    const radius = p.r * (1 - frac * 0.5);
+  for (const p of CONF) {
+    const ph = t * 0.55 + p.ph;
+    const ox = Math.sin(ph) * 12;
+    const oy = Math.cos(ph * 0.78) * 14;
+    const r  = p.r + Math.sin(ph * 0.6) * 6;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle   = p.color;
-    ctx.shadowColor = p.color;
-    ctx.shadowBlur  = 12;
-    ctx.beginPath();
-    ctx.arc(px, py, radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.translate(p.x + ox, p.y + oy);
+    ctx.rotate((r * Math.PI) / 180);
+    drawShape(ctx, p);
     ctx.restore();
   }
 }
 
-// ─── Public handle ─────────────────────────────────────────────────────────────
+// ─── Sparkles (chip arrival bursts) ──────────────────────────────────────────
+const SPARK_COLORS = [C.coral, C.gold, C.plum, C.orange];
+
+function drawSparkBurst(ctx: CanvasRenderingContext2D, cx: number, cy: number, age: number) {
+  if (age < 0 || age > 0.55) return;
+  const N = 6;
+  for (let i = 0; i < N; i++) {
+    const ang   = (i / N) * Math.PI * 2 + cy * 0.001;
+    const dist  = age * 110 + 30;
+    const px    = cx + Math.cos(ang) * dist;
+    const py    = cy + Math.sin(ang) * dist;
+    const alpha = 1 - age / 0.55;
+    const rad   = 7 * (1 - age * 1.5);
+    if (rad <= 0) continue;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = SPARK_COLORS[i % SPARK_COLORS.length];
+    ctx.beginPath(); ctx.arc(px, py, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ─── Chip ────────────────────────────────────────────────────────────────────
+const CHIP_PALETTE = [
+  { bg: C.peach,    fg: C.peachTx, bd: C.peachBd },
+  { bg: C.butter,   fg: C.butTx,   bd: C.butBd   },
+  { bg: C.mint,     fg: C.minTx,   bd: C.minBd   },
+  { bg: C.sky,      fg: C.skyTx,   bd: C.skyBd   },
+  { bg: C.lavender, fg: C.lavTx,   bd: C.lavBd   },
+  { bg: C.peach,    fg: C.peachTx, bd: C.peachBd },
+];
+
+// Center-y for each chip slot (centered horizontally, varied rotation)
+const CHIP_SLOTS = [
+  { y: 980,  rot: -5 },
+  { y: 1110, rot:  4 },
+  { y: 1240, rot: -3 },
+  { y: 1370, rot:  6 },
+  { y: 1500, rot: -4 },
+  { y: 1630, rot:  5 },
+];
+
+function drawChip(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number,
+  text: string,
+  pal: { bg: string; fg: string; bd: string },
+  fontSize: number,
+  alpha: number,
+  scale: number,
+  rotDeg: number,
+) {
+  if (alpha <= 0 || scale <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(cx, cy);
+  ctx.rotate((rotDeg * Math.PI) / 180);
+  ctx.scale(scale, scale);
+
+  ctx.font = `700 ${fontSize}px var(--font-sora), Sora, system-ui, sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign    = 'left';
+  const fitted = fitText(ctx, text, 760);
+  const tw = ctx.measureText(fitted).width;
+  const padX = 56, padY = 32;
+  const cW = tw + padX * 2;
+  const cH = fontSize + padY * 2;
+  const cr = cH / 2;
+  const lx = -cW / 2, ly = -cH / 2;
+
+  ctx.shadowColor   = 'rgba(91,45,130,0.18)';
+  ctx.shadowBlur    = 28;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle     = pal.bg;
+  rr(ctx, lx, ly, cW, cH, cr);
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = pal.bd;
+  ctx.lineWidth = 3;
+  rr(ctx, lx, ly, cW, cH, cr);
+  ctx.stroke();
+
+  ctx.fillStyle = pal.fg;
+  ctx.fillText(fitted, lx + padX, 0);
+  ctx.restore();
+}
+
+// ─── Highlight (hand-drawn coral underline) ──────────────────────────────────
+function drawUnderline(
+  ctx: CanvasRenderingContext2D,
+  cx: number, y: number, width: number,
+  progress: number, alpha: number,
+) {
+  if (progress <= 0 || alpha <= 0) return;
+  const halfW = width / 2;
+  const startX = cx - halfW;
+  const endX   = cx + halfW;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = C.coral;
+  ctx.lineWidth   = 14;
+  ctx.lineCap     = 'round';
+
+  // Approximate the bezier with a polyline so we can clip to `progress`
+  const STEPS = 60;
+  const target = Math.floor(STEPS * progress);
+  ctx.beginPath();
+  for (let i = 0; i <= target; i++) {
+    const t = i / STEPS;
+    // Quadratic bezier: P0 (startX, y+4), C (cx, y-12), P1 (endX, y+2)
+    const x = (1 - t) ** 2 * startX + 2 * (1 - t) * t * cx + t ** 2 * endX;
+    const yy = (1 - t) ** 2 * (y + 4) + 2 * (1 - t) * t * (y - 14) + t ** 2 * (y + 2);
+    if (i === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ─── O ring (matches the new logo: solid coral, detached segment) ────────────
+// Geometry (from Logo.tsx): R=11, SW=3.4, main 315°, gap1 20°, detached 14°, gap2 11°
+const O_START_DEG  = -24;
+const O_MAIN_DEG   = 315;
+const O_GAP1_DEG   = 20;
+const O_DETACH_DEG = 14;
+
+function drawO(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, r: number, sw: number,
+  drawProgress: number, alpha: number, glow = false,
+) {
+  if (alpha <= 0 || drawProgress <= 0) return;
+  const TAU = Math.PI * 2;
+  const Cc  = TAU * r;
+  const mainLen = (O_MAIN_DEG   / 360) * Cc;
+  const detLen  = (O_DETACH_DEG / 360) * Cc;
+  const drawn   = drawProgress * (mainLen + detLen);
+  const a0 = (O_START_DEG * Math.PI) / 180;
+  const a1 = a0 + (O_MAIN_DEG * Math.PI) / 180;
+  const a2 = a1 + (O_GAP1_DEG * Math.PI) / 180;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (glow) { ctx.shadowColor = 'rgba(255,107,94,0.55)'; ctx.shadowBlur = 52; }
+  ctx.strokeStyle = C.coral;
+  ctx.lineWidth   = sw;
+  ctx.lineCap     = 'round';
+
+  const md = Math.min(drawn, mainLen);
+  if (md > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, a0, a0 + (md / Cc) * TAU, false);
+    ctx.stroke();
+  }
+  if (drawn > mainLen) {
+    const dd = Math.min(drawn - mainLen, detLen);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, a2, a2 + (dd / Cc) * TAU, false);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ─── Final logo geometry (canvas scale) ──────────────────────────────────────
+// SVG viewBox 170×46, ser starts x=44, O at cx=116 r=11 sw=3.4, fontSize=42 letterSpacing=-2.2
+// We want visible logo content ~480px wide on canvas. Scale = 480/83 ≈ 5.78
+const LOGO_FS  = 240;          // font size for "ser" (42 × 5.78)
+const LOGO_R   = 64;           // O radius (11 × 5.78)
+const LOGO_SW  = 20;           // O stroke (3.4 × 5.78)
+const LOGO_CY  = 970;          // O center y (final position)
+const LOGO_LSP = -12;          // letter-spacing for "ser" (canvas px)
+
+// Final positions: 'ser' starts at LOGO_SER_X (left edge), O sits to its right
+const LOGO_O_GAP = 14;         // gap between 'r' and 'o' center
+function logoLayout(ctx: CanvasRenderingContext2D) {
+  ctx.font = `800 ${LOGO_FS}px var(--font-sora), Sora, system-ui, sans-serif`;
+  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${LOGO_LSP}px`;
+  const serW = ctx.measureText('ser').width + LOGO_LSP * 2; // adjust for spacing on 3 letters
+  const totalW = serW + LOGO_O_GAP + LOGO_R * 2;
+  const startX = (CW - totalW) / 2;
+  const serX   = startX;
+  const oCX    = startX + serW + LOGO_O_GAP + LOGO_R;
+  const baseline = LOGO_CY + LOGO_R;   // matches SVG: baseline ≈ cy + r
+  return { serX, oCX, baseline, serW, totalW };
+}
+
+function drawSer(ctx: CanvasRenderingContext2D, x: number, baseline: number, alpha: number, glow = false) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = `800 ${LOGO_FS}px var(--font-sora), Sora, system-ui, sans-serif`;
+  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${LOGO_LSP}px`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign    = 'left';
+  if (glow) { ctx.shadowColor = 'rgba(24,24,27,0.18)'; ctx.shadowBlur = 30; }
+  ctx.fillStyle = C.ink;
+  ctx.fillText('ser', x, baseline);
+  ctx.restore();
+}
+
+// ─── Public handle ───────────────────────────────────────────────────────────
 export interface StoryCardHandle {
   captureVideo(): Promise<{ url: string; ext: string }>;
 }
 
-// ─── Component ─────────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 export const StoryCard = forwardRef<
   StoryCardHandle,
   { firstName: string; tags: string[]; shareUrl: string }
->(function StoryCard({ firstName, tags, shareUrl }, ref) {
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const rafRef      = useRef<number>();
-  const startRef    = useRef<number>(0);
-  const drawFnRef   = useRef<(ctx: CanvasRenderingContext2D, t: number) => void>(() => {});
-  const sparksRef   = useRef<Particle[]>([]);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+>(function StoryCard({ firstName, tags, shareUrl: _shareUrl }, ref) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef<number>();
+  const startRef  = useRef<number>(0);
+  const drawFnRef = useRef<(ctx: CanvasRenderingContext2D, t: number) => void>(() => {});
 
-  // Prepare resolved labels (user tags + fallback)
-  const FALLBACK = ['música', 'series', 'películas', 'algo que amas'];
+  // Up to 6 displayable tags. Fallback to generic worlds if user has fewer.
+  const FALLBACK = ['música', 'series', 'películas', 'libros', 'deportes', 'anime'];
   const userLabels = [
-    ...tags.filter(Boolean).slice(0, 4),
+    ...tags.filter(Boolean).slice(0, 6),
     ...FALLBACK,
-  ].slice(0, 4);
+  ].slice(0, 6);
 
-  // Seed sparks once (not in render path — deterministic)
-  if (sparksRef.current.length === 0) {
-    sparksRef.current = seedParticles(CW / 2, CH * 0.48);
-  }
-
-  // ── Update drawFn whenever props change ──────────────────────────────────────
   useEffect(() => {
     drawFnRef.current = (ctx: CanvasRenderingContext2D, t: number) => {
-      ctx.clearRect(0, 0, CW, CH);
-      drawBg(ctx, t);
+      // ── Background ──────────────────────────────────────────────────────
+      ctx.fillStyle = C.cream;
+      ctx.fillRect(0, 0, CW, CH);
 
-      // ── Phase 0 (0 – 3.0 s): title text + floating pre-made chips ─────────
-      if (t < 3.0) {
-        const titleA = eoc(il(0, 0.5, t));
+      // Confetti always present, fades in over first 0.4s
+      const confA = eOut(il(0, 0.4, t));
+      drawConfetti(ctx, t, confA);
 
-        // Title — 3 lines, centered, rgba(24,24,27,0.7)
+      // ── Phase 1: NAME REVEAL (0.0 – 1.4s) ───────────────────────────────
+      // Phase 2: name shrinks to top (1.4 – 1.8s)
+      // We compute name properties continuously:
+      //   - 0.0-1.4: name large at center y=900, fontSize 220
+      //   - 1.4-1.8: shrinks to fontSize 90, moves to y=410
+      //   - 1.8+:   stays small at top through phase 2
+      //   - 4.6-5.0: fades out during sweep
+      const nameLargeY  = 900;
+      const nameSmallY  = 380;
+      const nameLargeFS = 220;
+      const nameSmallFS = 84;
+
+      const shrinkP = eInOut(il(1.4, 1.8, t));
+      const nameY   = nameLargeY  + (nameSmallY  - nameLargeY)  * shrinkP;
+      const nameFS  = nameLargeFS + (nameSmallFS - nameLargeFS) * shrinkP;
+      const nameA   = eOut(il(0.30, 0.95, t)) * (1 - eOut(il(4.6, 5.0, t)));
+
+      // Caveat heading "esto es lo que ama" — fades in early, fades out before phase 2
+      const headA = eOut(il(0.20, 0.80, t)) * (1 - eOut(il(1.30, 1.70, t)));
+      if (headA > 0.01) {
         ctx.save();
-        ctx.globalAlpha = titleA;
-        ctx.textAlign   = 'center';
-        ctx.font = `800 96px Sora, sans-serif`;
-        ctx.fillStyle   = 'rgba(24,24,27,0.7)';
-        ctx.textBaseline = 'middle';
-        const ly = O_CY;  // same vertical area as the O will be
-        ctx.fillText('Los planes que', CW / 2, ly - 130);
-
-        // "amaría [name]" — name in coral
-        const prefix   = 'amaría ';
-        const prefixW  = ctx.measureText(prefix).width;
-        const nameMax  = CW - 96 * 2 - prefixW;
-        const fname    = fitText(ctx, firstName || 'tú', nameMax);
-        const nameW    = ctx.measureText(fname).width;
-        const lineW    = prefixW + nameW;
-        const lineX    = CW / 2 - lineW / 2;
-        ctx.textAlign  = 'left';
-        ctx.fillStyle  = 'rgba(24,24,27,0.7)';
-        ctx.fillText(prefix, lineX, ly);
-        ctx.fillStyle  = '#FF6B5E';
-        ctx.fillText(fname, lineX + prefixW, ly);
-
-        ctx.textAlign  = 'center';
-        ctx.fillStyle  = 'rgba(24,24,27,0.7)';
-        ctx.fillText('son…', CW / 2, ly + 130);
-        ctx.restore();
-
-        // Floating chips — run throughout phase 0, fade in/out at edges
-        P0_TRACKS.forEach((tr, i) => {
-          const label = P0_LABELS[i % P0_LABELS.length];
-          const lt    = t - tr.dl;
-          if (lt <= 0 || lt >= tr.dr) return;
-          const prog  = lt / tr.dr;
-          const edgeA = prog < 0.08 ? prog / 0.08 : prog > 0.88 ? (1 - prog) / 0.12 : 1;
-          const cx2   = tr.sX + tr.d * (CW + 520) * prog;
-          drawChip(ctx, cx2, CH * tr.yF, label, edgeA * titleA, 'left', 460, 44);
-        });
-      }
-
-      // ── Phase 1 (3.0 – 3.5 s): everything fades out ──────────────────────
-      if (t >= 3.0 && t < 3.5) {
-        const fadeA = 1 - eoc(il(3.0, 3.5, t));
-
-        ctx.save();
-        ctx.globalAlpha = fadeA;
-        ctx.textAlign   = 'center';
-        ctx.font = `800 96px Sora, sans-serif`;
-        ctx.fillStyle   = 'rgba(24,24,27,0.7)';
-        ctx.textBaseline = 'middle';
-        const ly = O_CY;
-        ctx.fillText('Los planes que', CW / 2, ly - 130);
-        const prefix  = 'amaría ';
-        const pw      = ctx.measureText(prefix).width;
-        const fn      = fitText(ctx, firstName || 'tú', CW - 192 - pw);
-        const lw      = pw + ctx.measureText(fn).width;
-        const lx2     = CW / 2 - lw / 2;
-        ctx.textAlign = 'left';
-        ctx.fillText(prefix, lx2, ly);
-        ctx.fillStyle = '#FF6B5E';
-        ctx.fillText(fn, lx2 + pw, ly);
-        ctx.fillStyle = 'rgba(24,24,27,0.7)';
+        ctx.globalAlpha = headA;
+        ctx.font = `700 86px var(--font-caveat), Caveat, cursive`;
+        ctx.fillStyle = C.plum;
         ctx.textAlign = 'center';
-        ctx.fillText('son…', CW / 2, ly + 130);
-        ctx.restore();
-
-        // Chips also fade
-        P0_TRACKS.forEach((tr, i) => {
-          const lt   = t - tr.dl;
-          if (lt <= 0 || lt >= tr.dr) return;
-          const prog = lt / tr.dr;
-          const cx2  = tr.sX + tr.d * (CW + 520) * prog;
-          drawChip(ctx, cx2, CH * tr.yF, P0_LABELS[i % P0_LABELS.length], fadeA, 'left', 460, 44);
-        });
-      }
-
-      // ── Phase 2 (3.5 – 4.5 s): O draws in + user chips appear below ──────
-      if (t >= 3.5 && t < 4.5) {
-        // O draw-in over 0.8 s
-        const oP = eio(il(3.5, 4.3, t));
-        drawOring(ctx, O_CX, O_CY, O_R, O_SW, oP);
-
-        // User chips stagger in from t=3.5, one every 0.25 s
-        P2_LAYOUT.forEach((slot, i) => {
-          const entryT = 3.5 + i * 0.25;
-          const entA   = eoc(il(entryT, entryT + 0.35, t));
-          if (entA <= 0) return;
-          const label  = userLabels[i] ?? '';
-          const inward = slot.from === 'left' ? -1 : 1;
-          const offX   = (1 - eoc(il(entryT, entryT + 0.4, t))) * inward * 320;
-          drawChip(ctx, slot.ax + offX, slot.y, label, entA, slot.align, 270, 44);
-        });
-      }
-
-      // ── Phase 3 (4.5 – 5.0 s): chips glow → "ser" slides in → logo glow ──
-      if (t >= 4.5 && t < 5.0) {
-        // Big O stays (fully drawn)
-        const oGlow = t < 4.8;
-        drawOring(ctx, O_CX, O_CY, O_R, O_SW, 1, 1, oGlow);
-
-        // User chips: hold position, with glow fading out
-        const chipGlowA = 1 - il(4.5, 4.8, t);
-        P2_LAYOUT.forEach((slot, i) => {
-          const label = userLabels[i] ?? '';
-          const glow  = chipGlowA > 0.02 ? 'rgba(255,107,94,0.5)' : undefined;
-          drawChip(ctx, slot.ax, slot.y, label, 1, slot.align, 270, 44, glow);
-        });
-
-        // "ser" slides in from t=4.75
-        const serP    = eoc(il(4.75, 5.0, t));
-        const logoGlow = serP > 0.9;
-        if (serP > 0) {
-          // Hide the big O ring as the logo O takes over
-          // (drawSer draws a logo-sized O aligned to serW + gap)
-          drawSer(ctx, O_CX, O_CY, O_R, serP, 1, logoGlow);
-        } else {
-          drawOring(ctx, O_CX, O_CY, O_R, O_SW, 1, 1, oGlow);
-        }
-      }
-
-      // ── Phase 4 (5.0 – 6.5 s): chips exit → question text + sparks ────────
-      if (t >= 5.0 && t < 6.5) {
-        // Logo stays (ser + O)
-        const logoGlow = t < 5.3;
-        drawSer(ctx, O_CX, O_CY, O_R, 1, 1, logoGlow);
-
-        // User chips exit (5.0 – 5.5 s) back toward their entry side
-        const exitP = eoc(il(5.0, 5.5, t));
-        if (exitP < 1) {
-          P2_LAYOUT.forEach((slot, i) => {
-            const label  = userLabels[i] ?? '';
-            const exitDir = slot.from === 'left' ? -1 : 1;  // reverse to entry side
-            const offX   = exitP * exitDir * (CW + 300);
-            drawChip(ctx, slot.ax + offX, slot.y, label, 1 - exitP, slot.align, 270, 44);
-          });
-        }
-
-        // Question text rises from bottom (5.5 – 6.5 s, 1 s)
-        if (t >= 5.5) {
-          const qP    = il(5.5, 6.5, t);
-          const qEase = eoc(qP);
-          const yOff  = (1 - qEase) * CH * 0.42;   // starts 42% of height below target
-          const qA    = eoc(il(5.5, 5.9, t));
-          const qCY   = CH * 0.47;
-
-          ctx.save();
-          ctx.globalAlpha = qA;
-          ctx.font = `800 80px Sora, sans-serif`;
-          ctx.fillStyle   = 'rgba(24,24,27,0.7)';
-          ctx.textAlign   = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('¿Qué tendría',     CW / 2, qCY - 55 + yOff);
-          ctx.fillText('tu plan perfecto?', CW / 2, qCY + 55 + yOff);
-          ctx.restore();
-
-          // Sparks burst when text first appears
-          const sparkAge = t - 5.5;
-          if (sparkAge < 1.4) drawSparks(ctx, sparksRef.current, sparkAge);
-        }
-      }
-
-      // ── Phase 5 (6.5 – 7.5 s): text fades, logo slides to center, tagline ─
-      if (t >= 6.5 && t < 7.5) {
-        // Question text fades out (6.5 – 7.0 s)
-        const qFadeA = 1 - eoc(il(6.5, 7.0, t));
-        if (qFadeA > 0.01) {
-          ctx.save();
-          ctx.globalAlpha = qFadeA;
-          ctx.font = `800 80px Sora, sans-serif`;
-          ctx.fillStyle   = 'rgba(24,24,27,0.7)';
-          ctx.textAlign   = 'center';
-          ctx.textBaseline = 'middle';
-          const qCY = CH * 0.47;
-          ctx.fillText('¿Qué tendría',     CW / 2, qCY - 55);
-          ctx.fillText('tu plan perfecto?', CW / 2, qCY + 55);
-          ctx.restore();
-        }
-
-        // Logo slides down from O_CY to O_CY_FINAL (7.0 – 7.5 s)
-        const slideP   = eio(il(7.0, 7.5, t));
-        const curOCY   = O_CY + slideP * (O_CY_FINAL - O_CY);
-        const logoInA  = eoc(il(6.8, 7.2, t));
-        drawSer(ctx, O_CX, curOCY, O_R, 1, logoInA, true);
-
-        // Tagline appears as logo reaches final position
-        const tagA = eoc(il(7.2, 7.5, t));
-        if (tagA > 0) {
-          const lFSize   = 168;
-          const baseline = O_CY_FINAL + lFSize * 0.365;
-          ctx.save();
-          ctx.globalAlpha = tagA;
-          ctx.font = `700 60px Sora, sans-serif`;
-          ctx.fillStyle   = '#18181B';
-          ctx.textAlign   = 'center';
-          ctx.textBaseline = 'top';
-          ctx.fillText('Mismos gustos, mejores planes', CW / 2, baseline + 40);
-          ctx.restore();
-        }
-      }
-
-      // ── Final frame (7.5 s +) — held ─────────────────────────────────────
-      if (t >= 7.5) {
-        const lFSize   = 168;
-        const baseline = O_CY_FINAL + lFSize * 0.365;
-
-        // Logo (ser + O, with breathing O)
-        // Breathing: subtle scale on O in final frame
-        const breathe = 1 + Math.sin((t - 7.5) * 1.4) * 0.015;
-        const bR = O_R * breathe;
-
-        drawSer(ctx, O_CX, O_CY_FINAL, bR, 1, 1, false);
-
-        // Tagline
-        ctx.save();
-        ctx.font = `700 60px Sora, sans-serif`;
-        ctx.fillStyle   = '#18181B';
-        ctx.textAlign   = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText('Mismos gustos, mejores planes', CW / 2, baseline + 40);
-        ctx.restore();
-
-        // URL pill
-        const short = shareUrl.replace(/^https?:\/\//, '');
-        ctx.save();
-        ctx.font = `500 38px Sora, sans-serif`;
-        const fitted = fitText(ctx, short, CW - 200);
-        const tw     = ctx.measureText(fitted).width;
-        const pH = 76, pPad = 64, pW = tw + pPad * 2;
-        const pX = (CW - pW) / 2, pY = baseline + 40 + 90;
-        ctx.fillStyle = 'rgba(24,24,27,0.07)';
-        rr(ctx, pX, pY, pW, pH, pH / 2); ctx.fill();
-        ctx.fillStyle   = 'rgba(24,24,27,0.4)';
-        ctx.textAlign   = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(fitted, CW / 2, pY + pH / 2);
+        const headY = 720;
+        // Tiny tilt for the handwritten feel
+        ctx.translate(CW / 2, headY);
+        ctx.rotate((-3 * Math.PI) / 180);
+        ctx.fillText('esto es lo que ama', 0, 0);
+        ctx.restore();
+      }
+
+      // Name (always rendered while nameA > 0)
+      if (nameA > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = nameA;
+        ctx.font = `800 ${nameFS}px var(--font-sora), Sora, system-ui, sans-serif`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-3px`;
+        ctx.fillStyle = C.ink;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const dispName = fitText(ctx, firstName || 'amig@', CW - 160);
+        ctx.fillText(dispName, CW / 2, nameY);
+
+        // Underline only during phase 1 (large name)
+        if (shrinkP < 0.4) {
+          const tw   = ctx.measureText(dispName).width;
+          const ulW  = Math.min(tw + 40, CW - 140);
+          const ulP  = eOut(il(0.85, 1.30, t));
+          const ulA  = (1 - shrinkP * 2.5);
+          drawUnderline(ctx, CW / 2, nameY + nameFS * 0.42, ulW, ulP, Math.max(0, ulA));
+        }
+        ctx.restore();
+      }
+
+      // ── Phase 2: TASTES REVEAL (1.8 – 4.6s) ──────────────────────────────
+      // Each chip enters at: chipStart = 1.85 + i * 0.40
+      // Exits at: 4.60 + i * 0.05 (very slight stagger)
+      const NUM = Math.min(userLabels.length, 6);
+      for (let i = 0; i < NUM; i++) {
+        const slot = CHIP_SLOTS[i];
+        const pal  = CHIP_PALETTE[i % CHIP_PALETTE.length];
+        const chipStart = 1.85 + i * 0.40;
+        const chipExit  = 4.60 + i * 0.05;
+        const chipExitEnd = chipExit + 0.30;
+
+        const entryP = il(chipStart, chipStart + 0.50, t);
+        const exitP  = il(chipExit, chipExitEnd, t);
+
+        // Scale: 0 → 1.08 (back overshoot) → 1.0
+        const scale = entryP < 0.001 ? 0 : eBack(entryP);
+        // Alpha: in 0→1 by t=chipStart+0.25, out 1→0 by chipExitEnd
+        const alpha = eOut(il(chipStart, chipStart + 0.25, t)) * (1 - eOut(exitP));
+
+        if (alpha < 0.01) continue;
+
+        // Idle wobble after entry settles
+        const wobbleT = Math.max(0, t - chipStart - 0.5);
+        const wobble  = Math.sin(wobbleT * 1.4 + i) * 1.2;
+        const rotDeg  = slot.rot + wobble;
+
+        // Slight downward drift while exiting (fall away)
+        const exitDy = exitP * 60;
+        const cy     = slot.y + exitDy;
+
+        drawChip(ctx, CW / 2, cy, userLabels[i], pal, 64, alpha, scale, rotDeg);
+
+        // Sparkle burst on arrival
+        const burstAge = t - (chipStart + 0.10);
+        drawSparkBurst(ctx, CW / 2, slot.y, burstAge);
+      }
+
+      // ── Phase 3: SWEEP + BIG O draws in (4.9 – 5.6s) ─────────────────────
+      // Big O lives at (CW/2, 870), R=210, sw=22 (3.4× the final SW for impact)
+      // Then in Phase 4 (5.6–6.5s) it scales+moves to the logo position.
+      const BIG_CX = CW / 2;
+      const BIG_CY = 870;
+      const BIG_R  = 210;
+      const BIG_SW = 28;
+
+      // Big-O draw-in: 5.00 → 5.60 (0.60s)
+      const bigDrawP = eOut(il(5.00, 5.60, t));
+      // Big-O alone alpha (held 5.60 → 5.80 before the morph kicks in)
+      const bigSoloA = bigDrawP * (t < 5.80 ? 1 : 1);
+
+      // Morph progress: 5.80 → 6.30 — O scales/translates from BIG to logo
+      const morphP = eInOut(il(5.80, 6.30, t));
+
+      // 'ser' slides in from off-left: 5.90 → 6.40
+      const serP   = eOut(il(5.90, 6.40, t));
+
+      // Compute O current position+radius (interpolate from BIG to logo target)
+      if (bigDrawP > 0.01) {
+        const layout = logoLayout(ctx);
+        const targetCX = layout.oCX;
+        const targetCY = LOGO_CY;
+        const curCX = BIG_CX + (targetCX - BIG_CX) * morphP;
+        const curCY = BIG_CY + (targetCY - BIG_CY) * morphP;
+        const curR  = BIG_R  + (LOGO_R  - BIG_R)  * morphP;
+        const curSW = BIG_SW + (LOGO_SW - BIG_SW) * morphP;
+
+        // Glow only while big & during glow flash at end of morph
+        const glowFlash = t >= 6.30 && t < 6.55;
+        const glow      = (morphP < 0.2) || glowFlash;
+        drawO(ctx, curCX, curCY, curR, curSW, bigDrawP, bigSoloA, glow);
+
+        // 'ser' starts off-left at x = -300, ends at layout.serX
+        if (serP > 0) {
+          const serX = -300 + (layout.serX - (-300)) * serP;
+          drawSer(ctx, serX, layout.baseline, serP, glowFlash);
+        }
+      }
+
+      // ── Phase 5: CTA HOLD (6.50 – 8.00s) ─────────────────────────────────
+      // "¿y tú?" above logo, "amigos que comparten lo que amas" below
+      // Plus a small "únete a" inline-prefix to the left of the logo… but per spec the
+      // line is "únete a [sero]". We render "únete a" centered above the logo line.
+      const ctaTopA = eOut(il(6.55, 6.85, t));
+      const ctaBotA = eOut(il(6.65, 6.95, t));
+
+      if (ctaTopA > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = ctaTopA;
+        // "¿y tú?" caveat, plum, slight tilt
+        ctx.font = `700 130px var(--font-caveat), Caveat, cursive`;
+        ctx.fillStyle = C.plum;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.translate(CW / 2, 720);
+        ctx.rotate((-2 * Math.PI) / 180);
+        ctx.fillText('¿y tú?', 0, 0);
+        ctx.restore();
+
+        // "únete a" small label above the logo
+        ctx.save();
+        ctx.globalAlpha = ctaTopA;
+        ctx.font = `600 56px var(--font-sora), Sora, system-ui, sans-serif`;
+        ctx.fillStyle = C.inkSoft;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('únete a', CW / 2, 840);
+        ctx.restore();
+      }
+
+      if (ctaBotA > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = ctaBotA;
+        ctx.font = `600 60px var(--font-sora), Sora, system-ui, sans-serif`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-0.5px`;
+        ctx.fillStyle = C.ink;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('amigos que comparten lo que amas', CW / 2, 1180);
+        ctx.restore();
+      }
+
+      // Subtle breathing on the O during the final hold (after assembly done)
+      if (t >= 6.60) {
+        const breathe = 1 + Math.sin((t - 6.60) * 1.3) * 0.015;
+        const layout = logoLayout(ctx);
+        const bR = LOGO_R * breathe;
+        // Re-draw a glow halo behind the O (very faint)
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.shadowColor = 'rgba(255,107,94,0.40)';
+        ctx.shadowBlur  = 36;
+        drawO(ctx, layout.oCX, LOGO_CY, bR, LOGO_SW, 1, 0.001, true);
         ctx.restore();
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firstName, tags, shareUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstName, tags]);
 
-  // ── Animation loop ───────────────────────────────────────────────────────────
+  // ── Animation loop ─────────────────────────────────────────────────────────
   function startAnim(canvas: HTMLCanvasElement) {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const ctx = canvas.getContext('2d')!;
     startRef.current = performance.now();
     const loop = () => {
       const t = (performance.now() - startRef.current) / 1000;
-      drawFnRef.current(ctx, Math.min(t, 15));
-      rafRef.current = requestAnimationFrame(loop);  // keep running for final-frame breathe
+      drawFnRef.current(ctx, Math.min(t, 12));
+      rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
   }
@@ -547,15 +595,14 @@ export const StoryCard = forwardRef<
     if (!canvas) return;
     document.fonts.ready.then(() => startAnim(canvas));
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Video capture ─────────────────────────────────────────────────────────────
+  // ── Video capture (8s sequence + 0.4s tail = 8400ms record) ────────────────
   useImperativeHandle(ref, () => ({
     captureVideo() {
       const canvas = canvasRef.current;
       if (!canvas) return Promise.resolve({ url: '', ext: 'webm' });
-
       const mimeType = MediaRecorder.isTypeSupported('video/mp4')
         ? 'video/mp4'
         : MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
@@ -572,9 +619,9 @@ export const StoryCard = forwardRef<
           const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
           resolve({ url: URL.createObjectURL(blob), ext });
         };
-        startAnim(canvas);       // restart animation from t=0
+        startAnim(canvas);
         recorder.start(100);
-        setTimeout(() => recorder.stop(), 8200);  // record 8 s + buffer
+        setTimeout(() => recorder.stop(), 8400);
       });
     },
   }));
