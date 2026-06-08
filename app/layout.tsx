@@ -41,6 +41,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${sora.variable} ${caveat.variable}`}>
+      <head>
+        {/* Secondary Google Fonts <link> so the fonts are also registered under
+            their original family names ("Sora", "Caveat") — required for use
+            in <canvas>, which cannot resolve CSS variables. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Sora:wght@400;500;600;700;800&display=swap"
+        />
+      </head>
       <body className="font-sans">
         <NoZoom />
         {children}

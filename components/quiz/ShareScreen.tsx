@@ -5,6 +5,7 @@ import { StoryCard, type StoryCardHandle } from './StoryCard';
 import { Confetti } from '../ui/Confetti';
 import { StickerNote } from '../ui/StickerNote';
 import { Highlight } from '../ui/Highlight';
+import { shareVideoOrDownload } from '@/lib/shareVideo';
 import type { SubmitResult } from '@/lib/types';
 
 export function ShareScreen({
@@ -32,31 +33,36 @@ export function ShareScreen({
     setState('recording');
     setPct(0);
 
-    // Progress counter — recording takes ~10.6 s
     const start    = Date.now();
     const interval = setInterval(() => {
-      setPct(Math.min(Math.round((Date.now() - start) / 8200 * 100), 99));
+      setPct(Math.min(Math.round((Date.now() - start) / 8400 * 100), 99));
     }, 200);
 
     try {
-      // Copy URL to clipboard at the same moment
+      // Copy URL to clipboard — runs in parallel with recording
       navigator.clipboard.writeText(shareUrl).catch(() => {});
 
       const { url, ext } = await cardRef.current!.captureVideo();
       clearInterval(interval);
       setPct(100);
 
-      // Trigger browser download
-      const a = document.createElement('a');
-      a.href     = url;
-      a.download = `sero-${result.slug}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      // Try iOS-friendly share sheet first, fall back to anchor download
+      const outcome = await shareVideoOrDownload(
+        url,
+        `sero-${result.slug}.${ext}`,
+        { title: 'sero', text: 'Únete a sero — amigos que comparten lo que amas' },
+      );
 
-      setState('done');
-      setTimeout(() => { setState('idle'); setPct(0); }, 4000);
+      // Cleanup blob URL (after the share sheet has read it)
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+
+      if (outcome === 'cancelled') {
+        setState('idle');
+        setPct(0);
+      } else {
+        setState('done');
+        setTimeout(() => { setState('idle'); setPct(0); }, 4000);
+      }
     } catch {
       clearInterval(interval);
       setState('idle');
@@ -65,9 +71,9 @@ export function ShareScreen({
   };
 
   const buttonLabel = () => {
-    if (state === 'done')      return 'Video descargado · link copiado ✓';
-    if (state === 'recording') return `Grabando tu video… ${pct}%`;
-    return 'Descargar video y copiar mi link';
+    if (state === 'done')      return 'Listo · link copiado ✓';
+    if (state === 'recording') return `Preparando tu video… ${pct}%`;
+    return 'Compartir mi video y copiar mi link';
   };
 
   return (
@@ -131,13 +137,13 @@ export function ShareScreen({
       {/* Instructions */}
       <div className="relative z-10 mt-6 w-full max-w-sm space-y-3">
         <p className="text-ink/75 text-base font-medium leading-snug">
-          1️⃣ &nbsp;Descarga y tu link se copia solo 🔗
+          1️⃣ &nbsp;Toca el botón — se abre la hoja para compartir 📤
         </p>
         <p className="text-ink/75 text-base font-medium leading-snug">
-          2️⃣ &nbsp;Sube el video a tu story y pega tu link como sticker 📲
+          2️⃣ &nbsp;Manda a Instagram Stories o WhatsApp 📲
         </p>
         <p className="text-ink/75 text-base font-medium leading-snug">
-          3️⃣ &nbsp;O envíalo por WhatsApp con tu link pegado 💬
+          3️⃣ &nbsp;Pega tu link (ya está en tu portapapeles) como sticker 🔗
         </p>
       </div>
 

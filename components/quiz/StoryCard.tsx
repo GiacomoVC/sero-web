@@ -179,14 +179,15 @@ const CHIP_PALETTE = [
   { bg: C.peach,    fg: C.peachTx, bd: C.peachBd },
 ];
 
-// Center-y for each chip slot (centered horizontally, varied rotation)
+// Slots: organic scatter (varied x offset + rotation) below the small name.
+// Bigger chips (80px font) need ~180px vertical spacing for clean separation.
 const CHIP_SLOTS = [
-  { y: 980,  rot: -5 },
-  { y: 1110, rot:  4 },
-  { y: 1240, rot: -3 },
-  { y: 1370, rot:  6 },
-  { y: 1500, rot: -4 },
-  { y: 1630, rot:  5 },
+  { x: CW / 2 - 70, y: 620,  rot: -5 },
+  { x: CW / 2 + 90, y: 800,  rot:  4 },
+  { x: CW / 2 - 90, y: 980,  rot: -3 },
+  { x: CW / 2 + 70, y: 1160, rot:  6 },
+  { x: CW / 2 - 60, y: 1340, rot: -4 },
+  { x: CW / 2 + 80, y: 1520, rot:  5 },
 ];
 
 function drawChip(
@@ -206,7 +207,7 @@ function drawChip(
   ctx.rotate((rotDeg * Math.PI) / 180);
   ctx.scale(scale, scale);
 
-  ctx.font = `700 ${fontSize}px var(--font-sora), Sora, system-ui, sans-serif`;
+  ctx.font = `700 ${fontSize}px Sora, system-ui, sans-serif`;
   ctx.textBaseline = 'middle';
   ctx.textAlign    = 'left';
   const fitted = fitText(ctx, text, 760);
@@ -315,16 +316,16 @@ function drawO(
 // ─── Final logo geometry (canvas scale) ──────────────────────────────────────
 // SVG viewBox 170×46, ser starts x=44, O at cx=116 r=11 sw=3.4, fontSize=42 letterSpacing=-2.2
 // We want visible logo content ~480px wide on canvas. Scale = 480/83 ≈ 5.78
-const LOGO_FS  = 240;          // font size for "ser" (42 × 5.78)
-const LOGO_R   = 64;           // O radius (11 × 5.78)
-const LOGO_SW  = 20;           // O stroke (3.4 × 5.78)
-const LOGO_CY  = 970;          // O center y (final position)
-const LOGO_LSP = -12;          // letter-spacing for "ser" (canvas px)
+const LOGO_FS  = 300;          // font size for "ser" (42 × 7.14)
+const LOGO_R   = 80;           // O radius (11 × 7.27)
+const LOGO_SW  = 24;           // O stroke (3.4 × 7.06)
+const LOGO_CY  = 990;          // O center y (final position)
+const LOGO_LSP = -14;          // letter-spacing for "ser" (canvas px)
 
 // Final positions: 'ser' starts at LOGO_SER_X (left edge), O sits to its right
-const LOGO_O_GAP = 14;         // gap between 'r' and 'o' center
+const LOGO_O_GAP = 16;         // gap between 'r' and 'o' center
 function logoLayout(ctx: CanvasRenderingContext2D) {
-  ctx.font = `800 ${LOGO_FS}px var(--font-sora), Sora, system-ui, sans-serif`;
+  ctx.font = `800 ${LOGO_FS}px Sora, system-ui, sans-serif`;
   (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${LOGO_LSP}px`;
   const serW = ctx.measureText('ser').width + LOGO_LSP * 2; // adjust for spacing on 3 letters
   const totalW = serW + LOGO_O_GAP + LOGO_R * 2;
@@ -339,7 +340,7 @@ function drawSer(ctx: CanvasRenderingContext2D, x: number, baseline: number, alp
   if (alpha <= 0) return;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.font = `800 ${LOGO_FS}px var(--font-sora), Sora, system-ui, sans-serif`;
+  ctx.font = `800 ${LOGO_FS}px Sora, system-ui, sans-serif`;
   (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${LOGO_LSP}px`;
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign    = 'left';
@@ -389,10 +390,10 @@ export const StoryCard = forwardRef<
       //   - 1.4-1.8: shrinks to fontSize 90, moves to y=410
       //   - 1.8+:   stays small at top through phase 2
       //   - 4.6-5.0: fades out during sweep
-      const nameLargeY  = 900;
+      const nameLargeY  = 920;
       const nameSmallY  = 380;
-      const nameLargeFS = 220;
-      const nameSmallFS = 84;
+      const nameLargeFS = 280;
+      const nameSmallFS = 96;
 
       const shrinkP = eInOut(il(1.4, 1.8, t));
       const nameY   = nameLargeY  + (nameSmallY  - nameLargeY)  * shrinkP;
@@ -404,11 +405,11 @@ export const StoryCard = forwardRef<
       if (headA > 0.01) {
         ctx.save();
         ctx.globalAlpha = headA;
-        ctx.font = `700 86px var(--font-caveat), Caveat, cursive`;
+        ctx.font = `700 110px Caveat, "Caveat Brush", cursive`;
         ctx.fillStyle = C.plum;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const headY = 720;
+        const headY = 700;
         // Tiny tilt for the handwritten feel
         ctx.translate(CW / 2, headY);
         ctx.rotate((-3 * Math.PI) / 180);
@@ -420,7 +421,7 @@ export const StoryCard = forwardRef<
       if (nameA > 0.01) {
         ctx.save();
         ctx.globalAlpha = nameA;
-        ctx.font = `800 ${nameFS}px var(--font-sora), Sora, system-ui, sans-serif`;
+        ctx.font = `800 ${nameFS}px Sora, system-ui, sans-serif`;
         (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-3px`;
         ctx.fillStyle = C.ink;
         ctx.textAlign = 'center';
@@ -469,20 +470,20 @@ export const StoryCard = forwardRef<
         const exitDy = exitP * 60;
         const cy     = slot.y + exitDy;
 
-        drawChip(ctx, CW / 2, cy, userLabels[i], pal, 64, alpha, scale, rotDeg);
+        drawChip(ctx, slot.x, cy, userLabels[i], pal, 80, alpha, scale, rotDeg);
 
         // Sparkle burst on arrival
         const burstAge = t - (chipStart + 0.10);
-        drawSparkBurst(ctx, CW / 2, slot.y, burstAge);
+        drawSparkBurst(ctx, slot.x, slot.y, burstAge);
       }
 
       // ── Phase 3: SWEEP + BIG O draws in (4.9 – 5.6s) ─────────────────────
       // Big O lives at (CW/2, 870), R=210, sw=22 (3.4× the final SW for impact)
       // Then in Phase 4 (5.6–6.5s) it scales+moves to the logo position.
       const BIG_CX = CW / 2;
-      const BIG_CY = 870;
-      const BIG_R  = 210;
-      const BIG_SW = 28;
+      const BIG_CY = 900;
+      const BIG_R  = 230;
+      const BIG_SW = 34;
 
       // Big-O draw-in: 5.00 → 5.60 (0.60s)
       const bigDrawP = eOut(il(5.00, 5.60, t));
@@ -528,11 +529,11 @@ export const StoryCard = forwardRef<
         ctx.save();
         ctx.globalAlpha = ctaTopA;
         // "¿y tú?" caveat, plum, slight tilt
-        ctx.font = `700 130px var(--font-caveat), Caveat, cursive`;
+        ctx.font = `700 170px Caveat, "Caveat Brush", cursive`;
         ctx.fillStyle = C.plum;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.translate(CW / 2, 720);
+        ctx.translate(CW / 2, 640);
         ctx.rotate((-2 * Math.PI) / 180);
         ctx.fillText('¿y tú?', 0, 0);
         ctx.restore();
@@ -540,23 +541,25 @@ export const StoryCard = forwardRef<
         // "únete a" small label above the logo
         ctx.save();
         ctx.globalAlpha = ctaTopA;
-        ctx.font = `600 56px var(--font-sora), Sora, system-ui, sans-serif`;
+        ctx.font = `600 76px Sora, system-ui, sans-serif`;
         ctx.fillStyle = C.inkSoft;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('únete a', CW / 2, 840);
+        ctx.fillText('únete a', CW / 2, 820);
         ctx.restore();
       }
 
       if (ctaBotA > 0.01) {
         ctx.save();
         ctx.globalAlpha = ctaBotA;
-        ctx.font = `600 60px var(--font-sora), Sora, system-ui, sans-serif`;
-        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-0.5px`;
+        // Two lines for readability at IG story scale
+        ctx.font = `700 76px Sora, system-ui, sans-serif`;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `-1px`;
         ctx.fillStyle = C.ink;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('amigos que comparten lo que amas', CW / 2, 1180);
+        ctx.fillText('amigos que comparten',     CW / 2, 1250);
+        ctx.fillText('lo que amas',              CW / 2, 1350);
         ctx.restore();
       }
 
@@ -593,7 +596,18 @@ export const StoryCard = forwardRef<
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    document.fonts.ready.then(() => startAnim(canvas));
+    // Wait for the actual font families we use in canvas — not just
+    // document.fonts.ready, which can resolve before swap fonts arrive.
+    const fontsReady = (typeof document !== 'undefined' && document.fonts)
+      ? Promise.all([
+          document.fonts.load('800 280px Sora'),
+          document.fonts.load('700 96px  Sora'),
+          document.fonts.load('700 80px  Sora'),
+          document.fonts.load('700 170px Caveat'),
+          document.fonts.load('700 110px Caveat'),
+        ]).catch(() => undefined)
+      : Promise.resolve();
+    fontsReady.then(() => startAnim(canvas));
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -603,25 +617,79 @@ export const StoryCard = forwardRef<
     captureVideo() {
       const canvas = canvasRef.current;
       if (!canvas) return Promise.resolve({ url: '', ext: 'webm' });
-      const mimeType = MediaRecorder.isTypeSupported('video/mp4')
-        ? 'video/mp4'
-        : MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-          ? 'video/webm;codecs=vp9'
-          : 'video/webm';
+
+      // Robust mime selection: prefer H.264 mp4 (plays in iOS Photos, IG Stories,
+      // WhatsApp DMs). Fall back through codec families until something works.
+      const candidates = [
+        'video/mp4;codecs=avc1.42E01F,mp4a.40.2', // H.264 Baseline + AAC
+        'video/mp4;codecs=avc1.640028',            // H.264 High
+        'video/mp4;codecs=avc1',
+        'video/mp4;codecs=h264',
+        'video/mp4',
+        'video/webm;codecs=h264',
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+      ];
+      let mimeType = '';
+      for (const m of candidates) {
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) {
+          mimeType = m;
+          break;
+        }
+      }
       const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
 
-      return new Promise<{ url: string; ext: string }>((resolve) => {
-        const stream   = canvas.captureStream(30);
-        const recorder = new MediaRecorder(stream, { mimeType });
+      return new Promise<{ url: string; ext: string }>((resolve, reject) => {
+        let stream: MediaStream;
+        try {
+          stream = canvas.captureStream(30);
+        } catch (e) { reject(e); return; }
+
+        const opts: MediaRecorderOptions = mimeType
+          ? { mimeType, videoBitsPerSecond: 6_000_000 } // 6 Mbps — sharp at 1080×1920
+          : { videoBitsPerSecond: 6_000_000 };
+        const recorder = new MediaRecorder(stream, opts);
         const chunks: Blob[] = [];
         recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
         recorder.onstop = () => {
-          const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
+          const outType = (mimeType.split(';')[0]) || `video/${ext}`;
+          const blob = new Blob(chunks, { type: outType });
           resolve({ url: URL.createObjectURL(blob), ext });
         };
-        startAnim(canvas);
-        recorder.start(100);
-        setTimeout(() => recorder.stop(), 8400);
+        recorder.onerror = (e) => reject(e);
+
+        // 1) Force Sora + Caveat to actually be loaded for canvas use.
+        //    (next/font's hashed family isn't visible to canvas; the Google
+        //    Fonts <link> in app/layout.tsx exposes the plain family names
+        //    used here — but we still must await them.)
+        const fontsReady = (typeof document !== 'undefined' && document.fonts)
+          ? Promise.all([
+              document.fonts.load('800 280px Sora'),
+              document.fonts.load('700 96px  Sora'),
+              document.fonts.load('700 80px  Sora'),
+              document.fonts.load('600 76px  Sora'),
+              document.fonts.load('700 170px Caveat'),
+              document.fonts.load('700 110px Caveat'),
+            ]).catch(() => undefined)
+          : Promise.resolve();
+
+        fontsReady.then(() => {
+          // 2) Restart animation, then wait for two paint frames so the recorder
+          //    never captures a blank first chunk (otherwise iOS can show
+          //    black/empty).
+          startAnim(canvas);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              try {
+                recorder.start(100);
+                setTimeout(() => {
+                  if (recorder.state !== 'inactive') recorder.stop();
+                }, 8400);
+              } catch (e) { reject(e); }
+            });
+          });
+        });
       });
     },
   }));
@@ -631,7 +699,7 @@ export const StoryCard = forwardRef<
       ref={canvasRef}
       width={CW}
       height={CH}
-      style={{ width: 270, height: 480, borderRadius: 24, display: 'block' }}
+      style={{ width: 300, height: 533, borderRadius: 24, display: 'block' }}
     />
   );
 });

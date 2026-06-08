@@ -10,6 +10,7 @@ import { useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { StoryCard, type StoryCardHandle } from '@/components/quiz/StoryCard';
+import { shareVideoOrDownload } from '@/lib/shareVideo';
 
 function Inner() {
   const params = useSearchParams();
@@ -26,16 +27,19 @@ function Inner() {
   const record = async () => {
     if (!cardRef.current) return;
     setState('recording');
-    const { url, ext } = await cardRef.current.captureVideo();
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sero-preview.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    setState('done');
-    setTimeout(() => setState('idle'), 2000);
+    try {
+      const { url, ext } = await cardRef.current.captureVideo();
+      await shareVideoOrDownload(url, `sero-preview.${ext}`, {
+        title: 'sero',
+        text:  'Únete a sero — amigos que comparten lo que amas',
+      });
+      // delay revoke so the share sheet finishes reading the blob
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      setState('done');
+      setTimeout(() => setState('idle'), 2500);
+    } catch {
+      setState('idle');
+    }
   };
 
   return (
@@ -52,7 +56,7 @@ function Inner() {
           ↻ Reproducir de nuevo
         </button>
         <button onClick={record} disabled={state === 'recording'} style={{ padding: '10px 18px', borderRadius: 999, background: 'white', color: '#18181B', border: 0, fontWeight: 600, cursor: 'pointer', opacity: state === 'recording' ? 0.5 : 1 }}>
-          {state === 'recording' ? 'Grabando…' : state === 'done' ? 'Descargado ✓' : 'Descargar video'}
+          {state === 'recording' ? 'Grabando…' : state === 'done' ? 'Listo ✓' : 'Compartir / descargar'}
         </button>
       </div>
 
