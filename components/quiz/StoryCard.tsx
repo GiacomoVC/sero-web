@@ -703,7 +703,7 @@ export const StoryCard = forwardRef<
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       recorder.onstop = () => {
-        try { audio?.source.stop(); } catch {}
+        try { audio?.stop(); } catch {}
         const outType = (mimeType.split(';')[0]) || `video/${ext}`;
         const blob = new Blob(chunks, { type: outType });
         const result = { url: URL.createObjectURL(blob), ext, blob };
@@ -719,10 +719,11 @@ export const StoryCard = forwardRef<
       requestAnimationFrame(() => requestAnimationFrame(() => {
         try {
           recorder.start(100);
-          // Start the audio AT THE SAME MOMENT recording starts so audio and
-          // video are in sync.
+          // Start audio AT THE SAME MOMENT recording starts so the speaker
+          // (HTMLAudioElement) and the recording (AudioBufferSource) are in
+          // sync.
           if (audio) {
-            try { audio.source.start(0); } catch {}
+            try { audio.start(); } catch {}
           }
           setTimeout(() => {
             if (recorder.state !== 'inactive') recorder.stop();

@@ -1,37 +1,62 @@
 /**
- * Page-level AudioContext singleton for the video card soundtrack.
+ * Soundtrack singleton for the video card.
  *
- * iOS Safari rule: AudioContext.resume() and Audio.play() require a user
- * gesture. We can't autoplay the soundtrack when the share screen mounts
- * (it's inside a React useEffect, by definition outside a gesture).
+ * Why two parallel audio paths?
+ *   - HTMLAudioElement.play() reliably reaches the iPhone speakers once
+ *     unlocked by a user gesture. WebAudio output through `ctx.destination`
+ *     is unreliable on iOS Safari (silent switch, ringer routing, partial
+ *     context suspend mid-life). So: HTMLAudioElement = preview audible.
+ *   - AudioBufferSourceNode → MediaStreamAudioDestinationNode gives us a
+ *     proper audio track that MediaRecorder can mux into the mp4. So:
+ *     WebAudio buffer = embedded in the shared video.
+ *   Both are started at (nearly) the same instant so the preview and the
+ *   recorded mp4 are in sync.
  *
- * Strategy:
- *   1. Call `unlockAndPreload()` from a real user gesture — specifically the
- *      "Terminar" click in the quiz, which the user makes ~1-2 seconds before
- *      the share screen appears. That call:
- *        - Creates the AudioContext
- *        - Resumes it (now allowed because we're in a gesture)
- *        - Fetches + decodes the mp3 into an AudioBuffer
- *   2. Once unlocked, the AudioContext stays resumed for the page session.
- *      The StoryCard's recordVideo() can later play the buffer through a
- *      MediaStreamAudioDestinationNode and mix it into the canvas recording
- *      without needing any further gesture.
- *   3. If unlock fails (or never runs), `getAudioBuffer()` returns null and
- *      recordVideo() falls back to a silent recording. UX still works.
+ * iOS gesture rule:
+ *   - AudioContext.resume() requires a user gesture for the very first call.
+ *   - HTMLAudioElement.play() requires a gesture for the first call PER
+ *     element. After that, subsequent play() calls work without one.
+ *   We synchronously trigger BOTH (resume + audio.play()→pause()) inside the
+ *   quiz "Terminar" click handler, then they stay unlocked for the rest of
+ *   the session.
  */
 
 let _ctx: AudioContext | null = null;
 let _buffer: AudioBuffer | null = null;
+let _audio: HTMLAudioElement | null = null;
 let _preloadPromise: Promise<void> | null = null;
 let _keepAlive: AudioBufferSourceNode | null = null;
+let _audioUnlockTried = false;
 
 const AUDIO_URL = '/video-card-music.mp3';
 
+function getCtx(): AudioContext | null {
+  if (_ctx) return _ctx;
+  if (typeof window === 'undefined') return null;
+  const Ctor =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctor) return null;
+  try { _ctx = new Ctor(); } catch { return null; }
+  return _ctx;
+}
+
+function getAudio(): HTMLAudioElement | null {
+  if (_audio) return _audio;
+  if (typeof window === 'undefined') return null;
+  const a = new Audio(AUDIO_URL);
+  a.preload = 'auto';
+  // playsinline avoids fullscreen takeover on iOS and signals media-style
+  // playback (uses media volume rather than ringer volume).
+  a.setAttribute('playsinline', '');
+  a.setAttribute('webkit-playsinline', '');
+  _audio = a;
+  return _audio;
+}
+
 /**
- * iOS Safari auto-suspends AudioContext after a few seconds of inactivity,
- * even after resume(). To keep it alive between the quiz-Terminar click and
- * the share screen mount (which can be 3-5s due to submit+navigate), we play
- * a long silent buffer in a loop. Stopped when real audio kicks in.
+ * Plays a silent loop on the WebAudio context to keep iOS from auto-suspending
+ * it during the 3-5s gap between the quiz Terminar click and the share screen.
  */
 function startKeepAlive(ctx: AudioContext) {
   if (_keepAlive) return;
@@ -53,36 +78,48 @@ function stopKeepAlive() {
   }
 }
 
-function getCtx(): AudioContext | null {
-  if (_ctx) return _ctx;
-  if (typeof window === 'undefined') return null;
-  const Ctor =
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Ctor) return null;
-  try {
-    _ctx = new Ctor();
-  } catch {
-    return null;
-  }
-  return _ctx;
-}
-
 /**
  * MUST be called inside a user-gesture handler (e.g. button onClick) to
  * succeed on iOS Safari. Idempotent — safe to call multiple times.
+ *
+ * Synchronously triggers both unlock paths so they each grab the gesture
+ * context, then awaits their completion in the background.
  */
-export async function unlockAndPreload(): Promise<void> {
+export function unlockAndPreload(): Promise<void> {
   if (_preloadPromise) return _preloadPromise;
   const ctx = getCtx();
-  if (!ctx) return;
+  if (!ctx) return Promise.resolve();
+
+  // ── 1. SYNCHRONOUS triggers, inside the gesture context ───────────────
+  // AudioContext.resume() — return a Promise; the actual resume call is
+  // synchronous from the gesture's perspective.
+  const resumePromise =
+    ctx.state === 'suspended' ? ctx.resume() : Promise.resolve();
+
+  // HTMLAudioElement unlock — muted play+pause cycle. Synchronously calls
+  // .play() inside the gesture so iOS marks this element as "unlocked"
+  // for future non-gesture play() calls in this session.
+  let audioUnlockPromise: Promise<void> = Promise.resolve();
+  if (!_audioUnlockTried) {
+    _audioUnlockTried = true;
+    const audio = getAudio();
+    if (audio) {
+      audio.muted = true;
+      const p = audio.play();
+      audioUnlockPromise = (p instanceof Promise ? p : Promise.resolve())
+        .then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = false;
+        })
+        .catch(() => { /* couldn't unlock — fall back to silent recording */ });
+    }
+  }
+
+  // ── 2. Background: wait for unlocks, keep ctx alive, fetch+decode mp3 ──
   _preloadPromise = (async () => {
     try {
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-      }
-      // Keep ctx alive across the quiz->share navigation so the soundtrack
-      // is audible during the live preview on mobile (iOS auto-suspends).
+      await Promise.all([resumePromise, audioUnlockPromise]);
       startKeepAlive(ctx);
       if (!_buffer) {
         const res = await fetch(AUDIO_URL);
@@ -105,31 +142,51 @@ export function getAudioBuffer(): AudioBuffer | null {
 }
 
 /**
- * Build a MediaStream that carries the soundtrack audio, plus play it through
- * the speakers so the user hears it during the live preview/recording.
- * Returns null if audio isn't unlocked yet.
+ * Builds the soundtrack apparatus for one recording:
+ *   - `stream`: audio track for the MediaRecorder to mux into the mp4
+ *   - `start()`: fires both speaker (HTMLAudioElement) and recording (Buffer)
+ *     playback in sync
+ *   - `stop()`: pauses speaker + stops recording source
+ * Returns null if the soundtrack isn't ready yet (e.g. first paint on a
+ * cold visitor who never clicked anything).
  */
 export function createAudioStreamForRecording(): {
   stream: MediaStream;
-  source: AudioBufferSourceNode;
+  start: () => void;
+  stop: () => void;
 } | null {
   const ctx = _ctx;
   const buf = _buffer;
-  if (!ctx || !buf) return null;
+  const audio = getAudio();
+  if (!ctx || !buf || !audio) return null;
 
-  // Defensive: try to resume if still suspended. Won't always succeed if
-  // gesture is gone, but doesn't hurt.
+  // Defensive resume — works without gesture if ctx was previously unlocked.
   if (ctx.state === 'suspended') {
     ctx.resume().catch(() => {});
   }
-
-  // Stop the silent keep-alive so it doesn't fight the real audio.
   stopKeepAlive();
 
+  // WebAudio path → ONLY MediaStream (not connected to ctx.destination since
+  // iOS doesn't reliably route that to speakers). Speakers come from the
+  // HTMLAudioElement below.
   const source = ctx.createBufferSource();
   source.buffer = buf;
   const dest = ctx.createMediaStreamDestination();
   source.connect(dest);
-  source.connect(ctx.destination); // also play through speakers
-  return { stream: dest.stream, source };
+
+  return {
+    stream: dest.stream,
+    start: () => {
+      try {
+        audio.currentTime = 0;
+        const p = audio.play();
+        if (p instanceof Promise) p.catch(() => {});
+      } catch { /* ignore */ }
+      try { source.start(0); } catch { /* ignore */ }
+    },
+    stop: () => {
+      try { audio.pause(); audio.currentTime = 0; } catch { /* ignore */ }
+      try { source.stop(); } catch { /* ignore */ }
+    },
+  };
 }
