@@ -1,6 +1,7 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { createAudioStreamForRecording } from '@/lib/audioContext';
 
 // ─── Canvas resolution (1080×1920 portrait, IG story format) ─────────────────
 const CW = 1080;
@@ -680,17 +681,29 @@ export const StoryCard = forwardRef<
     const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
 
     return new Promise<{ url: string; ext: string; blob: Blob }>((resolve, reject) => {
-      let stream: MediaStream;
-      try { stream = canvas.captureStream(30); }
+      let videoStream: MediaStream;
+      try { videoStream = canvas.captureStream(30); }
       catch (e) { reject(e); return; }
+
+      // Try to combine soundtrack audio (if AudioContext was unlocked earlier
+      // via the quiz "Terminar" click). Falls back to silent recording if the
+      // mp3 isn't ready or the context never resumed.
+      const audio = createAudioStreamForRecording();
+      const recordStream = audio
+        ? new MediaStream([
+            ...videoStream.getVideoTracks(),
+            ...audio.stream.getAudioTracks(),
+          ])
+        : videoStream;
 
       const opts: MediaRecorderOptions = mimeType
         ? { mimeType, videoBitsPerSecond: 6_000_000 }
         : { videoBitsPerSecond: 6_000_000 };
-      const recorder = new MediaRecorder(stream, opts);
+      const recorder = new MediaRecorder(recordStream, opts);
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       recorder.onstop = () => {
+        try { audio?.source.stop(); } catch {}
         const outType = (mimeType.split(';')[0]) || `video/${ext}`;
         const blob = new Blob(chunks, { type: outType });
         const result = { url: URL.createObjectURL(blob), ext, blob };
@@ -706,6 +719,11 @@ export const StoryCard = forwardRef<
       requestAnimationFrame(() => requestAnimationFrame(() => {
         try {
           recorder.start(100);
+          // Start the audio AT THE SAME MOMENT recording starts so audio and
+          // video are in sync.
+          if (audio) {
+            try { audio.source.start(0); } catch {}
+          }
           setTimeout(() => {
             if (recorder.state !== 'inactive') recorder.stop();
           }, 8400);

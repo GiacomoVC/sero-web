@@ -153,24 +153,6 @@ export function ShareScreen({
         {buttonLabel()}
       </button>
 
-      {/* Instructions — dash-free copy */}
-      <div className="relative z-10 mt-7 w-full max-w-sm">
-        <p className="text-ink/50 text-xs uppercase tracking-[0.25em] text-center mb-3">
-          Cómo compartir
-        </p>
-        <ol className="space-y-3">
-          <li className="text-ink/80 text-base font-medium leading-snug">
-            <span className="font-bold text-coral">1.</span>&nbsp; Toca el botón. Se abre la hoja para compartir 📤
-          </li>
-          <li className="text-ink/80 text-base font-medium leading-snug">
-            <span className="font-bold text-coral">2.</span>&nbsp; Manda el video a Instagram Stories o WhatsApp 📲
-          </li>
-          <li className="text-ink/80 text-base font-medium leading-snug">
-            <span className="font-bold text-coral">3.</span>&nbsp; Pega tu link (ya está copiado) como sticker o mensaje 🔗
-          </li>
-        </ol>
-      </div>
-
       {/* Footer */}
       <p className="relative z-10 mt-10 text-ink/30 text-xs tracking-[0.3em] uppercase">
         Sero · {new Date().getFullYear()}

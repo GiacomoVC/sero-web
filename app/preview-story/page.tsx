@@ -11,6 +11,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { StoryCard, type StoryCardHandle } from '@/components/quiz/StoryCard';
 import { shareVideoBlob } from '@/lib/shareVideo';
+import { unlockAndPreload } from '@/lib/audioContext';
 
 function Inner() {
   const params = useSearchParams();
@@ -23,6 +24,9 @@ function Inner() {
   const [tick, setTick] = useState(0);
 
   const restart = () => {
+    // Unlock audio inside this user-gesture so the next recording can mix it
+    // in. AudioContext stays unlocked for the rest of the page session.
+    unlockAndPreload();
     setStage('preparing');
     setTick((x) => x + 1);
   };
