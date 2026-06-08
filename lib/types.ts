@@ -26,6 +26,7 @@ export interface QuizResponses {
   // Personal
   firstName: string;
   lastName: string;
+  city: string;
   age: string;
   whatsapp: string;
 

@@ -35,7 +35,7 @@ function Inner() {
     setStage('sharing');
     shareVideoBlob(ready.blob, ready.url, `sero-preview.${ready.ext}`, {
       title: 'sero',
-      text:  'Únete a sero — amigos que comparten lo que amas',
+      text:  'sero · mismos gustos, mejores planes',
     })
       .then(() => {
         setStage('done');

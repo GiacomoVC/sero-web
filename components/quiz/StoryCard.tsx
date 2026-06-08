@@ -447,7 +447,7 @@ export const StoryCard = forwardRef<
       const nameFS  = nameLargeFS + (nameSmallFS - nameLargeFS) * shrinkP;
       const nameA   = eOut(il(0.30, 0.95, t)) * (1 - eOut(il(4.6, 5.0, t)));
 
-      // Caveat heading "esto es lo que ama" — fades in early, fades out before phase 2
+      // Caveat heading "el plan ideal de" fades in early, fades out before phase 2
       const headA = eOut(il(0.20, 0.80, t)) * (1 - eOut(il(1.30, 1.70, t)));
       if (headA > 0.01) {
         ctx.save();
@@ -461,7 +461,7 @@ export const StoryCard = forwardRef<
         // Tiny tilt for the handwritten feel
         ctx.translate(CW / 2, headY);
         ctx.rotate((-3 * Math.PI) / 180);
-        ctx.fillText('esto es lo que ama', 0, 0);
+        ctx.fillText('el plan ideal de', 0, 0);
         ctx.restore();
       }
 
@@ -579,7 +579,7 @@ export const StoryCard = forwardRef<
       }
 
       // ── Phase 5: CTA HOLD (6.50 – 8.00s) ─────────────────────────────────
-      // "¿y tú?" above logo, "amigos que comparten lo que amas" below
+      // "¿y tú?" above logo, "mismos gustos, mejores planes" below
       // Plus a small "únete a" inline-prefix to the left of the logo… but per spec the
       // line is "únete a [sero]". We render "únete a" centered above the logo line.
       const ctaTopA = eOut(il(6.55, 6.85, t));
@@ -621,8 +621,8 @@ export const StoryCard = forwardRef<
         ctx.fillStyle = C.ink;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('amigos que comparten',     CW / 2, 1250);
-        ctx.fillText('lo que amas',              CW / 2, 1345);
+        ctx.fillText('mismos gustos,',           CW / 2, 1250);
+        ctx.fillText('mejores planes',           CW / 2, 1345);
         ctx.restore();
       }
 

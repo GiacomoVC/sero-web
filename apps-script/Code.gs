@@ -25,22 +25,22 @@ const SHEET_NAME = 'responses';
 
 const COLUMNS = [
   'timestamp', 'slug', 'referredBy',
-  'firstName', 'lastName', 'age', 'whatsapp',
+  'firstName', 'lastName', 'city', 'age', 'whatsapp',
   'selectedWorlds', 'otrosMundos',
   // Música
-  'musica.categories', 'musica.eras', 'musica.topArtists',
+  'musica.categories', 'musica.picks', 'musica.eras', 'musica.topArtists',
   // Series
-  'series.categories', 'series.seriesOtro', 'series.region', 'series.netflixPick',
+  'series.categories', 'series.picks', 'series.seriesOtro', 'series.region', 'series.netflixPick',
   // Películas
-  'peliculas.categories', 'peliculas.tipo', 'peliculas.favorites',
+  'peliculas.categories', 'peliculas.picks', 'peliculas.tipo', 'peliculas.favorites',
   // Anime
-  'anime.categories', 'anime.preference', 'anime.favorites', 'anime.current',
+  'anime.categories', 'anime.picks', 'anime.preference', 'anime.favorites', 'anime.current',
   // Libros
-  'libros.categories', 'libros.topBooks', 'libros.recent',
+  'libros.categories', 'libros.picks', 'libros.topBooks', 'libros.recent',
   // Deportes
   'deportes.selected', 'deportes.otros',
   // Videojuegos
-  'videojuegos.categories', 'videojuegos.favorites',
+  'videojuegos.categories', 'videojuegos.picks', 'videojuegos.favorites',
   // Cierre
   'diningStyle', 'dietary', 'dietaryNote', 'expPreference',
   'rawJson',
@@ -50,15 +50,21 @@ const COLUMNS = [
 const ARRAY_FIELDS = {
   'selectedWorlds':       true,
   'musica.categories':    true,
+  'musica.picks':         true,
   'musica.eras':          true,
   'series.categories':    true,
+  'series.picks':         true,
   'series.region':        true,
   'series.netflixPick':   true,
   'peliculas.categories': true,
+  'peliculas.picks':      true,
   'peliculas.tipo':       true,
   'anime.categories':     true,
+  'anime.picks':          true,
   'libros.categories':    true,
+  'libros.picks':         true,
   'videojuegos.categories': true,
+  'videojuegos.picks':    true,
   'deportes.selected':    true,
 };
 

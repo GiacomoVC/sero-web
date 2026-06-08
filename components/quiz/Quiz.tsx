@@ -40,6 +40,7 @@ function emptyResponses(): QuizResponses {
   return {
     firstName: '',
     lastName: '',
+    city: '',
     age: '',
     whatsapp: '',
     selectedWorlds: [],
@@ -102,6 +103,7 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       return (
         q.firstName.trim().length > 0 &&
         q.lastName.trim().length > 0 &&
+        q.city.trim().length > 0 &&
         q.age.trim().length > 0 &&
         q.whatsapp.trim().length > 0
       );
@@ -321,6 +323,14 @@ function PersonalStep({
             placeholder="Perez"
             value={q.lastName}
             onChange={(e) => update('lastName', e.target.value)}
+          />
+        </Field>
+        <Field label="Tu ciudad">
+          <input
+            className="input"
+            placeholder="Lima"
+            value={q.city}
+            onChange={(e) => update('city', e.target.value)}
           />
         </Field>
         <Field label="Tu edad">

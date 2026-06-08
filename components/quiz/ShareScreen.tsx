@@ -55,10 +55,10 @@ export function ShareScreen({
     navigator.clipboard.writeText(shareUrl).catch(() => {});
 
     setStage('sharing');
-    // shareVideoBlob is synchronous up to navigator.share() — the returned
+    // shareVideoBlob is synchronous up to navigator.share(); the returned
     // promise resolves after the user dismisses the share sheet.
-    // For WhatsApp the `text` becomes the message body — URL + a short
-    // follow-up nudge. Instagram Stories ignores `text` so IG is unaffected.
+    // For WhatsApp the `text` becomes the message body. Instagram Stories
+    // ignores `text` so IG is unaffected.
     const waText = `${shareUrl}\n\nresponde y en <24hr tendrás nuevos planes 🥂👀 quizás conmigo`;
     shareVideoBlob(
       ready.blob,
@@ -96,7 +96,7 @@ export function ShareScreen({
         <Highlight variant="underline" color="coral">{firstName || 'amigo'}</Highlight>!
       </h1>
 
-      {/* Card + sticker cluster */}
+      {/* Card */}
       <div className="relative z-10 mt-8 inline-block">
         <div className="shrink-0 shadow-[0_24px_60px_-20px_rgba(91,45,130,0.35)] rounded-3xl overflow-hidden">
           <StoryCard
@@ -117,14 +117,19 @@ export function ShareScreen({
         </div>
       </div>
 
-      {/* Nudge */}
-      <p className="relative z-10 mt-6 text-ink/60 text-sm text-center max-w-xs">
-        Más amigos se suman, más rápido sale tu plan 🥂
-      </p>
+      {/* 24hr nudge — the new bit */}
+      <div className="relative z-10 mt-7 w-full max-w-sm rounded-2xl border border-coral/25 bg-white/70 backdrop-blur px-5 py-4 text-center">
+        <p className="text-ink text-base font-bold leading-snug">
+          En menos de 24hr te llega tu primera invitación a un plan 🥂
+        </p>
+        <p className="mt-1.5 text-ink/65 text-sm leading-snug">
+          Mientras más amig@s se sumen, mejor tu plan.
+        </p>
+      </div>
 
       {/* Progress bar (only while preparing) */}
       {stage === 'preparing' && (
-        <div className="relative z-10 mt-4 w-full max-w-sm h-1.5 bg-ink/10 rounded-full overflow-hidden">
+        <div className="relative z-10 mt-5 w-full max-w-sm h-1.5 bg-ink/10 rounded-full overflow-hidden">
           <div
             className="h-full bg-coral rounded-full transition-all duration-200"
             style={{ width: `${pct}%` }}
@@ -148,17 +153,22 @@ export function ShareScreen({
         {buttonLabel()}
       </button>
 
-      {/* Instructions */}
-      <div className="relative z-10 mt-6 w-full max-w-sm space-y-3">
-        <p className="text-ink/75 text-base font-medium leading-snug">
-          1️⃣ &nbsp;Toca el botón — se abre la hoja para compartir 📤
+      {/* Instructions — dash-free copy */}
+      <div className="relative z-10 mt-7 w-full max-w-sm">
+        <p className="text-ink/50 text-xs uppercase tracking-[0.25em] text-center mb-3">
+          Cómo compartir
         </p>
-        <p className="text-ink/75 text-base font-medium leading-snug">
-          2️⃣ &nbsp;Manda a Instagram Stories o WhatsApp 📲
-        </p>
-        <p className="text-ink/75 text-base font-medium leading-snug">
-          3️⃣ &nbsp;Pega tu link (ya está en tu portapapeles) como sticker 🔗
-        </p>
+        <ol className="space-y-3">
+          <li className="text-ink/80 text-base font-medium leading-snug">
+            <span className="font-bold text-coral">1.</span>&nbsp; Toca el botón. Se abre la hoja para compartir 📤
+          </li>
+          <li className="text-ink/80 text-base font-medium leading-snug">
+            <span className="font-bold text-coral">2.</span>&nbsp; Manda el video a Instagram Stories o WhatsApp 📲
+          </li>
+          <li className="text-ink/80 text-base font-medium leading-snug">
+            <span className="font-bold text-coral">3.</span>&nbsp; Pega tu link (ya está copiado) como sticker o mensaje 🔗
+          </li>
+        </ol>
       </div>
 
       {/* Footer */}
