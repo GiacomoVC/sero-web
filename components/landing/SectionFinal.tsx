@@ -21,11 +21,11 @@ export function SectionFinal({ refSlug }: { refSlug?: string } = {}) {
 
       <div className="relative z-10 max-w-2xl mx-auto">
         <h2 className="text-4xl sm:text-6xl font-black text-ink tracking-tight leading-[1.05]">
-          La gente que buscas{' '}
-          <Highlight variant="underline" color="plum">ya está buscándote</Highlight>
+          Tu plan y tu gente,{' '}
+          <Highlight variant="underline" color="plum">listos!</Highlight>
         </h2>
         <p className="text-ink/60 text-lg mt-6 leading-relaxed">
-          Sero conecta personas a través de amigos y mundos compartidos.
+          Sero los encuentra a través de tus amigos y mundos compartidos.
         </p>
 
         {/* Polaroid + sticker cluster */}
@@ -43,7 +43,7 @@ export function SectionFinal({ refSlug }: { refSlug?: string } = {}) {
             href={quizHref}
             className="btn-primary text-lg animate-pulse-ring inline-flex"
           >
-            Encontrar a mi gente →
+            Quiero mi plan
           </Link>
         </div>
 

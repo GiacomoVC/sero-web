@@ -242,22 +242,10 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       if (!res.ok) throw new Error('No pudimos guardar tu respuesta.');
       const data: SubmitResult = await res.json();
 
-      // Show PreparingScreen while the story image generates in the background
+      // The new ShareScreen doesn't preview a per-user video card anymore, so
+      // we no longer need to pre-fetch the IG story image. Go straight to it.
       setResult(data);
       setSubmitting(false);
-
-      const resolvedStoryUrl = data.igUrl.replace(/^https?:\/\/[^/]+/, window.location.origin);
-      try {
-        const imgRes = await Promise.race<Response>([
-          fetch(resolvedStoryUrl),
-          new Promise<Response>((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), 8000)
-          ),
-        ]);
-        const blob = await imgRes.blob();
-        setStoryBlob(new File([blob], `sero-story-${data.slug}.png`, { type: 'image/png' }));
-      } catch { /* timeout — show share screen anyway */ }
-
       setStoryReady(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error desconocido');
@@ -381,9 +369,9 @@ function PersonalStep({
 }) {
   return (
     <>
-      <StepTitle title="Empecemos por ti." />
+      <StepTitle title="Lo básico 👇" />
       <div className="space-y-4">
-        <Field label="Tu nombre">
+        <Field label="Nombre">
           <input
             className="input"
             placeholder="Juan"
@@ -392,7 +380,7 @@ function PersonalStep({
             autoFocus
           />
         </Field>
-        <Field label="Tu apellido">
+        <Field label="Apellido">
           <input
             className="input"
             placeholder="Perez"
@@ -400,7 +388,7 @@ function PersonalStep({
             onChange={(e) => update('lastName', e.target.value)}
           />
         </Field>
-        <Field label="Tu ciudad">
+        <Field label="Ciudad">
           <input
             className="input"
             placeholder="Lima"
@@ -408,7 +396,7 @@ function PersonalStep({
             onChange={(e) => update('city', e.target.value)}
           />
         </Field>
-        <Field label="Tu edad">
+        <Field label="Edad">
           <input
             className="input"
             inputMode="numeric"
@@ -419,7 +407,7 @@ function PersonalStep({
             }
           />
         </Field>
-        <Field label="Tu WhatsApp">
+        <Field label="WhatsApp">
           <input
             className="input"
             inputMode="tel"
@@ -454,8 +442,8 @@ function WorldsStep({
   return (
     <>
       <StepTitle
-        title="Elige lo que más amas."
-        sub={`Elige hasta ${MAX_WORLDS} mundos.`}
+        title="Tus mundos"
+        sub={`elige hasta ${MAX_WORLDS}`}
       />
       <div className="flex flex-wrap gap-2.5">
         {WORLDS.map((w) => {
@@ -926,7 +914,7 @@ function ClosingStep({
 
   return (
     <>
-      <StepTitle title="Lo último." sub="Para armar planes que se sientan tuyos." />
+      <StepTitle title="Lo último" />
 
       <Field label="eres de">
         <div className="flex flex-wrap gap-2">
@@ -946,7 +934,7 @@ function ClosingStep({
       </Field>
 
       <div className="mt-6">
-        <Field label="¿Tienes alguna restricción alimentaria?">
+        <Field label="restricción alimentaria">
           <div className="flex flex-wrap gap-2">
             {dietOpts.map((o) => (
               <button
@@ -973,7 +961,7 @@ function ClosingStep({
       </div>
 
       <div className="mt-6">
-        <Field label="Si lanzamos una experiencia para ti, preferirías:">
+        <Field label="para el plan, prefieres">
           <div className="flex flex-wrap gap-2">
             {expOpts.map((o) => (
               <button

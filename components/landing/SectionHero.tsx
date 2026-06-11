@@ -73,14 +73,14 @@ export function SectionHero({ refSlug }: { refSlug?: string }) {
         </h1>
 
         <p className="mt-6 text-lg sm:text-xl font-bold text-ink/70 max-w-md mx-auto leading-relaxed">
-          ¿Cuándo fue la última vez que eso se convirtió en{' '}
+          ¿Cuándo fue la última vez que eso se volvió{' '}
           <Highlight variant="marker" color="coral">un plan</Highlight>?
         </p>
         <Link
           href={quizHref}
           className="btn-primary text-base mt-8 inline-flex"
         >
-          Convertirlo en un plan
+          Quiero mi plan
         </Link>
       </div>
 

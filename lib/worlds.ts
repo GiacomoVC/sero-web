@@ -134,71 +134,71 @@ type SuggestionsMap = Partial<
 export const SUGGESTIONS: SuggestionsMap = {
   musica: {
     'Pop': [
-      'Taylor Swift', 'Sabrina Carpenter', 'Olivia Rodrigo',
-      'Dua Lipa', 'The Weeknd', 'Harry Styles',
+      'Taylor Swift', 'Harry Styles', 'Sabrina Carpenter',
+      'The Weeknd', 'Lady Gaga',
     ],
     'Rock': [
       'Coldplay', 'Arctic Monkeys', 'The Strokes',
-      'Imagine Dragons', 'Foo Fighters', 'Måneskin',
+      'Imagine Dragons', 'Foo Fighters',
     ],
     'Indie / alternativo': [
       'Tame Impala', 'Mac DeMarco', 'Mitski',
-      'Phoebe Bridgers', 'Cuco', 'Clairo',
+      'Phoebe Bridgers', 'Clairo',
     ],
     'Electrónica': [
       'Fred again..', 'Disclosure', 'Calvin Harris',
-      'Daft Punk', 'ODESZA', 'Peggy Gou',
+      'Daft Punk', 'ODESZA',
     ],
     'Hip-hop / rap / urbano': [
       'Drake', 'Kendrick Lamar', 'Tyler, the Creator',
-      'Travis Scott', 'Doja Cat', 'J. Cole',
+      'Travis Scott', 'Doja Cat',
     ],
     'R&B / soul / jazz': [
       'SZA', 'Frank Ocean', 'Steve Lacy',
-      'Daniel Caesar', 'H.E.R.', 'Amy Winehouse',
+      'Daniel Caesar', 'Amy Winehouse',
     ],
     'Latin': [
       'Bad Bunny', 'Karol G', 'Rauw Alejandro',
-      'Feid', 'Peso Pluma', 'Rosalía',
+      'Feid', 'Peso Pluma',
     ],
     'Salsa': [
       'Héctor Lavoe', 'Rubén Blades', 'Marc Anthony',
-      'Willie Colón', 'Eddie Palmieri', 'Gilberto Santa Rosa',
+      'Willie Colón', 'Eddie Palmieri',
     ],
     'K-pop': [
       'BTS', 'BLACKPINK', 'NewJeans',
-      'TWICE', 'Stray Kids', 'IVE',
+      'TWICE', 'Stray Kids',
     ],
     'Metal': [
       'Metallica', 'Iron Maiden', 'Slipknot',
-      'Tool', 'System of a Down', 'Sleep Token',
+      'Tool', 'System of a Down',
     ],
     'Clásica': [
       'Hans Zimmer', 'Ludovico Einaudi', 'Yiruma',
-      'Joe Hisaishi', 'Max Richter', 'Ólafur Arnalds',
+      'Joe Hisaishi', 'Max Richter',
     ],
   },
 
   series: {
     'Drama': [
       'Succession', 'The Bear', 'Breaking Bad',
-      'Mad Men', 'Euphoria', 'White Lotus',
+      'Euphoria', 'White Lotus',
     ],
     'Comedia': [
       'The Office', 'Brooklyn 99', 'Friends',
-      'Schitt\'s Creek', 'Ted Lasso', 'Hacks',
+      'Schitt\'s Creek', 'Ted Lasso',
     ],
     'Sci-fi / fantasía': [
       'Stranger Things', 'The Last of Us', 'Game of Thrones',
-      'House of the Dragon', 'Severance', 'Loki',
+      'House of the Dragon', 'Severance',
     ],
     'Crimen / Thriller': [
       'Narcos', 'Money Heist', 'Ozark',
-      'You', 'Dahmer', 'Black Mirror',
+      'You', 'Black Mirror',
     ],
     'Realities': [
       'Love Island', 'Love is Blind', 'The Bachelor',
-      'Selling Sunset', 'Survivor', 'Married at First Sight',
+      'Selling Sunset', 'Survivor',
     ],
     'Documentales / True Crime': [
       'Tiger King', 'Making a Murderer', 'Wild Wild Country',
@@ -206,26 +206,26 @@ export const SUGGESTIONS: SuggestionsMap = {
     ],
     'Acción / aventura': [
       'Wednesday', 'Peaky Blinders', 'Lupin',
-      'The Boys', 'Jack Ryan', 'Vikings',
+      'The Boys', 'Vikings',
     ],
   },
 
   peliculas: {
     'Drama': [
       'La La Land', 'Whiplash', 'Past Lives',
-      'Aftersun', 'Marriage Story', 'Anatomy of a Fall',
+      'Aftersun', 'Anatomy of a Fall',
     ],
     'Comedia': [
       'Superbad', 'Bridesmaids', 'Easy A',
-      'Lady Bird', 'The Holdovers', 'Booksmart',
+      'Lady Bird', 'Booksmart',
     ],
     'Sci-fi / fantasía': [
       'Dune', 'Interstellar', 'Inception',
-      'Blade Runner 2049', 'Everything Everywhere All at Once', 'Oppenheimer',
+      'Everything Everywhere All at Once', 'Oppenheimer',
     ],
     'Crimen / Thriller': [
-      'Parasite', 'Gone Girl', 'Se7en',
-      'El Padrino', 'Pulp Fiction', 'Joker',
+      'Parasite', 'Gone Girl', 'El Padrino',
+      'Pulp Fiction', 'Joker',
     ],
     'Documentales / True Crime': [
       'My Octopus Teacher', 'Free Solo', 'The Social Dilemma',
@@ -233,57 +233,57 @@ export const SUGGESTIONS: SuggestionsMap = {
     ],
     'Acción / Aventura': [
       'Top Gun Maverick', 'John Wick', 'Mad Max Fury Road',
-      'Indiana Jones', 'Tenet', 'Mission Impossible',
+      'Indiana Jones', 'Mission Impossible',
     ],
   },
 
   anime: {
     'Shonen / acción': [
       'One Piece', 'Naruto', 'Demon Slayer',
-      'Jujutsu Kaisen', 'My Hero Academia', 'Chainsaw Man',
+      'Jujutsu Kaisen', 'My Hero Academia',
     ],
     'Seinen / maduro': [
       'Berserk', 'Vinland Saga', 'Vagabond',
-      'Monster', 'Tokyo Ghoul', 'Mushishi',
+      'Monster', 'Tokyo Ghoul',
     ],
     'Romance / slice of life': [
       'Frieren', 'Spy x Family', 'Komi-san',
-      'Horimiya', 'Toradora', 'Your Lie in April',
+      'Horimiya', 'Your Lie in April',
     ],
     'Fantasía / isekai': [
       'Frieren', 'Re:Zero', 'Mushoku Tensei',
-      'Konosuba', 'Sword Art Online', 'Overlord',
+      'Konosuba', 'Sword Art Online',
     ],
     'Deportes': [
       'Haikyuu', 'Slam Dunk', 'Kuroko no Basket',
-      'Free!', 'Blue Lock', 'Ace of Diamond',
+      'Blue Lock', 'Free!',
     ],
     'Terror / psicológico': [
       'Tokyo Ghoul', 'Death Note', 'Another',
-      'Higurashi', 'Junji Ito', 'Devilman Crybaby',
+      'Junji Ito', 'Devilman Crybaby',
     ],
     'Clásicos': [
       'Cowboy Bebop', 'Evangelion', 'Akira',
-      'Ghost in the Shell', 'Trigun', 'Samurai Champloo',
+      'Ghost in the Shell', 'Samurai Champloo',
     ],
     'Studio Ghibli': [
       'Spirited Away', 'Princess Mononoke', 'Howl\'s Moving Castle',
-      'Mi Vecino Totoro', 'Kiki', 'Ponyo',
+      'Mi Vecino Totoro', 'Ponyo',
     ],
   },
 
   libros: {
     'Ficción literaria': [
-      'Murakami', 'Bolaño', 'García Márquez',
-      'Sally Rooney', 'Cortázar', 'Vargas Llosa',
+      'Murakami', 'García Márquez', 'Sally Rooney',
+      'Cortázar', 'Vargas Llosa',
     ],
     'Fantasía': [
-      'Brandon Sanderson', 'Tolkien', 'Patrick Rothfuss',
-      'Sarah J. Maas', 'George R.R. Martin', 'Neil Gaiman',
+      'Brandon Sanderson', 'Tolkien', 'Sarah J. Maas',
+      'George R.R. Martin', 'Neil Gaiman',
     ],
     'Sci-fi': [
       'Dune (Frank Herbert)', 'Liu Cixin', 'Isaac Asimov',
-      'Ted Chiang', 'Ursula K. Le Guin', 'Philip K. Dick',
+      'Ted Chiang', 'Ursula K. Le Guin',
     ],
     'Romance': [
       'Colleen Hoover', 'Emily Henry', 'Sarah J. Maas',
@@ -291,7 +291,7 @@ export const SUGGESTIONS: SuggestionsMap = {
     ],
     'Thriller / misterio': [
       'Gillian Flynn', 'Stephen King', 'Tana French',
-      'Donna Tartt', 'Agatha Christie', 'Paula Hawkins',
+      'Donna Tartt', 'Agatha Christie',
     ],
     'Terror': [
       'Stephen King', 'Mariana Enríquez', 'Junji Ito',
@@ -299,34 +299,34 @@ export const SUGGESTIONS: SuggestionsMap = {
     ],
     'Filosofía / ensayo': [
       'Camus', 'Byung-Chul Han', 'Yuval Noah Harari',
-      'Nietzsche', 'Han Kang', 'Maggie Nelson',
+      'Nietzsche', 'Han Kang',
     ],
     'Poesía': [
-      'Neruda', 'Pizarnik', 'Idea Vilariño',
-      'Borges', 'Mary Oliver', 'Ocean Vuong',
+      'Neruda', 'Pizarnik', 'Borges',
+      'Mary Oliver', 'Ocean Vuong',
     ],
     'No ficción / divulgación': [
       'Sapiens', 'Atomic Habits', 'Educated',
-      'Bad Blood', 'The Body Keeps the Score', 'Outliers',
+      'Bad Blood', 'Outliers',
     ],
   },
 
   videojuegos: {
     'RPG': [
       'Elden Ring', 'Baldur\'s Gate 3', 'Witcher 3',
-      'Persona 5', 'Final Fantasy XVI', 'Dark Souls',
+      'Persona 5', 'Final Fantasy XVI',
     ],
     'Shooters / battle royale': [
       'Fortnite', 'Valorant', 'Call of Duty',
-      'Apex Legends', 'CS2', 'Overwatch',
+      'Apex Legends', 'CS2',
     ],
     'Estrategia': [
       'Civilization', 'Age of Empires', 'StarCraft',
-      'Total War', 'Crusader Kings', 'Stellaris',
+      'Total War', 'Crusader Kings',
     ],
     'Aventura / mundo abierto': [
       'Zelda BOTW / TOTK', 'GTA V', 'Red Dead Redemption 2',
-      'Assassin\'s Creed', 'Spider-Man', 'Cyberpunk 2077',
+      'Spider-Man', 'Cyberpunk 2077',
     ],
     'Lucha': [
       'Tekken 8', 'Street Fighter 6', 'Smash Bros',
@@ -334,18 +334,18 @@ export const SUGGESTIONS: SuggestionsMap = {
     ],
     'Deportes / carreras': [
       'FIFA / EA FC', 'NBA 2K', 'Forza Horizon',
-      'Mario Kart', 'F1', 'Gran Turismo',
+      'Mario Kart', 'F1',
     ],
     'MOBA (LoL, Dota)': [
       'League of Legends', 'Dota 2', 'Smite', 'Heroes of the Storm',
     ],
     'Indies': [
       'Hades', 'Stardew Valley', 'Hollow Knight',
-      'Celeste', 'Disco Elysium', 'Undertale',
+      'Celeste', 'Undertale',
     ],
     'Cozy / casual': [
       'Animal Crossing', 'Stardew Valley', 'Los Sims',
-      'Coral Island', 'Disney Dreamlight Valley', 'Spiritfarer',
+      'Coral Island', 'Disney Dreamlight Valley',
     ],
   },
 };

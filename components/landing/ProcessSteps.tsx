@@ -20,19 +20,19 @@ export const PROCESS_STEPS: Step[] = [
     num:    '01',
     icon:   '✍️',
     title:  'Cuéntanos qué amas',
-    body:   'Completa los mundos de tu perfil.',
+    body:   'En un quiz de 5 minutos.',
     bubble: 'bg-peach',
     accent: 'text-[#B33E2E]',
   },
   {
     num:    '02',
     icon:   '📲',
-    title:  'Mapea tu círculo',
+    title:  'Invita a tus amigos',
     body:   (
       <>
-        Envía tu link. Encontramos{' '}
-        <Highlight variant="underline" color="coral">amigos de amigos</Highlight>{' '}
-        que comparten tus mundos.
+        Así encontramos{' '}
+        <Highlight variant="underline" color="coral">gente que ama lo mismo</Highlight>{' '}
+        que tú. Nada de extraños.
       </>
     ),
     bubble: 'bg-lavender',
