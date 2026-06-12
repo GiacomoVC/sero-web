@@ -6,7 +6,7 @@ import { Highlight } from '../ui/Highlight';
 import type { SubmitResult } from '@/lib/types';
 
 // Placeholder until we have the real IG video URL — swap before launch.
-const URL_VIDEO_IG = 'https://www.instagram.com/p/PROVISIONAL/';
+const URL_VIDEO_IG = 'https://www.instagram.com/reel/DZgDYizvuXr/?igsh=ZTNvOXZzMngyMDBs';
 
 export function ShareScreen({
   result,
