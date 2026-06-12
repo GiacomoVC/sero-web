@@ -26,6 +26,12 @@ interface LogoProps {
   className?: string;
   priority?: boolean;
   animKey?: number;
+  /**
+   * Render the O in its final settled position with no intro animation.
+   * Use this for static exports (e.g. IG post images) where the rotation
+   * animation would get captured mid-frame by html2canvas.
+   */
+  noAnim?: boolean;
 }
 
 // ─── Geometry (viewBox 0 0 170 46) ─────────────────────────────────────────
@@ -53,6 +59,7 @@ export function Logo({
   className = '',
   priority  : _p,
   animKey,
+  noAnim    = false,
 }: LogoProps) {
   const height = Math.round(width * VH / VW);
 
@@ -98,7 +105,14 @@ export function Logo({
         strokeWidth={SW}
         strokeDasharray={dashArr}
         strokeLinecap="round"
-        className="animate-o-intro"
+        className={noAnim ? '' : 'animate-o-intro'}
+        style={noAnim ? {
+          // Final settled state of the animate-o-intro keyframes:
+          // O rotated -24deg around its own center → gap lands at ~1 o'clock.
+          transformBox: 'fill-box',
+          transformOrigin: 'center',
+          transform: 'rotate(-24deg)',
+        } : undefined}
       />
 
       {/* slot-tick ripple */}

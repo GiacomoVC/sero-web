@@ -8,36 +8,96 @@ export default function Page() {
     <div className="min-h-screen bg-ink py-10 px-4 flex flex-col items-center">
       <h1 className="text-white text-xl font-bold mb-6">Cómo funciona · 3/3</h1>
       <IgPostFrame fileName="ig-como-funciona-3">
-        <SlideBackdrop>
-          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: 170 }}>
-            <span
-              className="font-black"
-              style={{ fontSize: 420, color: '#8A6A1A', opacity: 0.16, letterSpacing: -12 }}
-            >
-              03
-            </span>
-          </div>
-
-          <div
-            className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center rounded-[80px]"
-            style={{ top: 450, width: 300, height: 300, background: '#FFE9B0', fontSize: 180 }}
+        <SlideBackdrop density="normal" showLogo={false}>
+          {/* Header */}
+          <p
+            className="absolute left-0 right-0 text-center font-bold"
+            style={{
+              top: 100,
+              fontSize: 36,
+              letterSpacing: '0.32em',
+              color: '#FF6B5E',
+            }}
           >
-            🥂
-          </div>
+            CÓMO FUNCIONA
+          </p>
 
-          <div className="absolute left-0 right-0 text-center" style={{ top: 830 }}>
-            <p className="font-black tracking-tight text-ink" style={{ fontSize: 160, letterSpacing: -2 }}>
+          {/* Card */}
+          <div
+            className="absolute"
+            style={{
+              left: 100,
+              top: 220,
+              width: 880,
+              height: 1060,
+              background: '#FFFFFF',
+              border: '1px solid rgba(24,24,27,0.08)',
+              borderRadius: 56,
+              boxShadow: '0 22px 50px -15px rgba(91,45,130,0.22)',
+              padding: 80,
+              boxSizing: 'border-box',
+            }}
+          >
+            {/* "03" — fixed-height container for export accuracy */}
+            <div style={{ height: 180, lineHeight: 1, overflow: 'visible' }}>
+              <span
+                style={{
+                  display: 'block',
+                  fontSize: 200,
+                  fontWeight: 900,
+                  opacity: 0.22,
+                  color: '#8A6A1A',
+                  lineHeight: 1,
+                  letterSpacing: -6,
+                }}
+              >
+                03
+              </span>
+            </div>
+
+            {/* Icon bubble — butter */}
+            <div
+              style={{
+                marginTop: 70,
+                width: 196,
+                height: 196,
+                borderRadius: 44,
+                background: '#FFE9B0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 124,
+                lineHeight: 1,
+              }}
+            >
+              🥂
+            </div>
+
+            {/* Title */}
+            <h2
+              style={{
+                marginTop: 56,
+                fontSize: 92,
+                fontWeight: 800,
+                color: '#18181B',
+                lineHeight: 1.05,
+                letterSpacing: -2,
+              }}
+            >
               Vive
-            </p>
-            <p className="font-black tracking-tight text-ink" style={{ fontSize: 140, letterSpacing: -2, marginTop: 8 }}>
+              <br />
               mejores planes
-            </p>
-          </div>
+            </h2>
 
-          <div className="absolute left-0 right-0 text-center" style={{ top: 1230 }}>
+            {/* Body */}
             <p
-              className="font-semibold"
-              style={{ fontSize: 72, color: 'rgba(24,24,27,0.65)', lineHeight: 1.2 }}
+              style={{
+                marginTop: 36,
+                fontSize: 54,
+                color: 'rgba(24,24,27,0.55)',
+                lineHeight: 1.35,
+                fontWeight: 500,
+              }}
             >
               Sero se encarga de todo,
               <br />
@@ -45,12 +105,18 @@ export default function Page() {
             </p>
           </div>
 
-          <div
-            className="absolute left-0 right-0 text-center"
-            style={{ bottom: 70, fontSize: 42, letterSpacing: '0.3em', color: 'rgba(24,24,27,0.35)' }}
+          {/* Page indicator */}
+          <p
+            className="absolute left-0 right-0 text-center font-semibold"
+            style={{
+              bottom: 60,
+              fontSize: 36,
+              letterSpacing: '0.32em',
+              color: 'rgba(24,24,27,0.40)',
+            }}
           >
             3 / 3
-          </div>
+          </p>
         </SlideBackdrop>
       </IgPostFrame>
     </div>

@@ -21,7 +21,7 @@ export function SlideBackdrop({
       <Confetti density={density} />
       {showLogo && (
         <div className="absolute top-12 left-12 z-10">
-          <Logo width={150} />
+          <Logo width={150} noAnim />
         </div>
       )}
       {children}
