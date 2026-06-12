@@ -26,7 +26,6 @@ export function ShareScreen({
   const _firstName = firstName; // referenced for parity / future use
 
   const [copied, setCopied] = useState(false);
-  const [igCopied, setIgCopied] = useState(false);
 
   const copyLink = () => {
     navigator.clipboard.writeText(shareUrl).catch(() => {});
@@ -49,21 +48,8 @@ export function ShareScreen({
   // (mobile) or the IG website (desktop). User pastes their link as a
   // sticker on the story.
   const openInstagram = () => {
-    navigator.clipboard.writeText(shareUrl).catch(() => {});
-    setIgCopied(true);
-    setTimeout(() => setIgCopied(false), 2500);
-    // Try iOS/Android deep link first; if it doesn't open in 600ms, fall
-    // back to the web URL.
-    const t = window.setTimeout(() => {
-      window.location.href = 'https://www.instagram.com/';
-    }, 600);
-    try {
-      window.location.href = 'instagram://story-camera';
-    } catch {
-      window.clearTimeout(t);
-      window.location.href = 'https://www.instagram.com/';
-    }
-  };
+  window.location.href = URL_VIDEO_IG;
+};
 
   return (
     <div className="relative min-h-[100svh] bg-cream flex flex-col items-center px-6 py-10 overflow-hidden">
@@ -116,20 +102,20 @@ export function ShareScreen({
       </p>
 
       {/* Instagram CTA */}
-      <button
-        type="button"
-        onClick={openInstagram}
-        className="relative z-10 mt-7 w-full max-w-sm inline-flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-95 text-white px-6 py-4 font-bold text-base shadow-[0_6px_0_rgba(91,45,130,0.18)] hover:scale-[1.02] active:scale-[0.98] transition-transform"
-      >
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden>
-          <path d="M12 2.2c3.2 0 3.6 0 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.25.07 1.62.07 4.85s-.01 3.6-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.25.06-1.62.07-4.85.07s-3.6-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.74 3.74 0 01-1.38-.9 3.74 3.74 0 01-.9-1.38c-.16-.42-.36-1.06-.41-2.23C2.21 15.6 2.2 15.22 2.2 12s.01-3.6.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.4 2.21 8.78 2.2 12 2.2M12 0C8.74 0 8.33 0 7.05.07 5.78.13 4.9.33 4.14.63a5.94 5.94 0 00-2.15 1.4 5.94 5.94 0 00-1.4 2.15C.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91a5.94 5.94 0 001.4 2.15c.62.62 1.34 1 2.15 1.4.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56a5.94 5.94 0 002.15-1.4 5.94 5.94 0 001.4-2.15c.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91a5.94 5.94 0 00-1.4-2.15A5.94 5.94 0 0019.86.63C19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 105.84 12 6.16 6.16 0 0012 5.84M12 16a4 4 0 114-4 4 4 0 01-4 4m6.4-11.85a1.44 1.44 0 11-1.44-1.44 1.44 1.44 0 011.44 1.44"/>
-        </svg>
-        {igCopied ? 'Link copiado · abre IG' : 'Comparte Sero en stories 🔗'}
-      </button>
+<button
+  type="button"
+  onClick={openInstagram}
+  className="relative z-10 mt-7 w-full max-w-sm inline-flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-95 text-white px-6 py-4 font-bold text-base shadow-[0_6px_0_rgba(91,45,130,0.18)] hover:scale-[1.02] active:scale-[0.98] transition-transform"
+>
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden>
+    <path d="M12 2.2c3.2 0 3.6 0 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.25.07 1.62.07 4.85s-.01 3.6-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.25.06-1.62.07-4.85.07s-3.6-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.74 3.74 0 01-1.38-.9 3.74 3.74 0 01-.9-1.38c-.16-.42-.36-1.06-.41-2.23C2.21 15.6 2.2 15.22 2.2 12s.01-3.6.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.4 2.21 8.78 2.2 12 2.2M12 0C8.74 0 8.33 0 7.05.07 5.78.13 4.9.33 4.14.63a5.94 5.94 0 00-2.15 1.4 5.94 5.94 0 00-1.4 2.15C.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91a5.94 5.94 0 001.4 2.15c.62.62 1.34 1 2.15 1.4.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56a5.94 5.94 0 002.15-1.4 5.94 5.94 0 001.4-2.15c.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91a5.94 5.94 0 00-1.4-2.15A5.94 5.94 0 0019.86.63C19.1.33 18.22.13 16.95.07 15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 105.84 12 6.16 6.16 0 0012 5.84M12 16a4 4 0 114-4 4 4 0 01-4 4m6.4-11.85a1.44 1.44 0 11-1.44-1.44 1.44 1.44 0 011.44 1.44"/>
+  </svg>
+  Compartir en stories
+</button>
 
-      <p className="relative z-10 mt-2 max-w-xs text-center text-ink/55 text-sm leading-snug">
-        Súbelo a tu story con tu link como sticker.
-      </p>
+<p className="relative z-10 mt-2 max-w-xs text-center text-ink/55 text-sm leading-snug">
+  Comparte con tu link como sticker.
+</p>
 
       {/* Footer */}
       <p className="relative z-10 mt-12 text-ink/30 text-xs tracking-[0.3em] uppercase">
