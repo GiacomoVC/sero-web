@@ -36,11 +36,11 @@ export function ShareScreen({
 
   // WhatsApp template — opens the share sheet pre-filled with the message.
   const waMessage =
-    `${URL_VIDEO_IG}            ` +
-    `¡Hola! 👀 Tenía que pasarte esto. ` +
+    `${URL_VIDEO_IG}                     ` +
+    `¡Hola! 👀 Tenía que pasarte esto.                   ` +
     `Es Sero: planes con gente que ama lo mismo que tú. ` +
     `Solo entre amigos, nada de extraños. Acabo de unirme 🙌\n` +
-    `Usa mi link 👇         ` +
+    `Usa mi link 👇                  ` +
     `${shareUrl}`;
   const waHref = `https://wa.me/?text=${encodeURIComponent(waMessage)}`;
 
