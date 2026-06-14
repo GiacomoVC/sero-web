@@ -121,7 +121,7 @@ export function ShareScreen({
 </p>
 
 <p className="relative z-10 mt-6 max-w-xs text-center text-ink/55 text-sm leading-snug">
-  Te avisaremos cuando esté tu grupo con mismos gustos!
+  Te escribimos cuando esté listo tu plan 🥂
 </p>
 
       {/* Footer */}
