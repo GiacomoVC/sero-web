@@ -61,7 +61,7 @@ export function ShareScreen({
       {/* Title */}
       <h1 className="relative z-10 mt-4 text-3xl sm:text-4xl font-black tracking-tight text-ink text-center">
         ¡Listo!{' '}
-        <Highlight variant="underline" color="coral">Ya estás dentro</Highlight>.
+        <Highlight variant="underline" color="coral">Ya estás en la lista</Highlight>
       </h1>
 
       {/* Personal link block */}
@@ -118,6 +118,10 @@ export function ShareScreen({
 
 <p className="relative z-10 mt-2 max-w-xs text-center text-ink/55 text-sm leading-snug">
   Comparte con tu link como sticker.
+</p>
+
+<p className="relative z-10 mt-6 max-w-xs text-center text-ink/55 text-sm leading-snug">
+  Te avisaremos cuando esté tu grupo con mismos gustos!
 </p>
 
       {/* Footer */}
