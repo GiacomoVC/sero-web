@@ -42,6 +42,10 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${sora.variable} ${caveat.variable}`}>
       <head>
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="manifest" href="/site.webmanifest" />
         {/* Secondary Google Fonts <link> so the fonts are also registered under
             their original family names ("Sora", "Caveat") — required for use
             in <canvas>, which cannot resolve CSS variables. */}
