@@ -25,26 +25,28 @@ const SHEET_NAME = 'responses';
 const FRIENDSHIPS_SHEET_NAME = 'friendships';
 const FRIENDSHIP_COLUMNS = ['timestamp', 'fromSlug', 'fromName', 'toSlug', 'toName', 'mutualFriend', 'commonCount'];
 
+// Column order MUST match the live `responses` sheet exactly — doPost appends
+// rows positionally and the export reads by COLUMNS.indexOf(...). 42 columns.
 const COLUMNS = [
   'timestamp', 'slug', 'referredBy',
   'firstName', 'lastName', 'city', 'age', 'whatsapp',
   'selectedWorlds', 'otrosMundos',
   // Música
-  'musica.categories', 'musica.picks', 'musica.eras', 'musica.topArtists', 'musica.musicaOtro',
+  'musica.categories', 'musica.picks', 'musica.eras', 'musica.topArtists',
   // Series
-  'series.categories', 'series.picks', 'series.seriesOtro', 'series.region', 'series.favorites',
+  'series.categories', 'series.picks', 'series.seriesOtro', 'series.region', 'series.netflixPick',
   // Películas
   'peliculas.categories', 'peliculas.picks', 'peliculas.tipo', 'peliculas.favorites',
   // Anime
   'anime.categories', 'anime.picks', 'anime.preference', 'anime.favorites', 'anime.current',
   // Libros
-  'libros.categories', 'libros.picks', 'libros.topBooks', 'libros.recent', 'libros.librosOtro',
+  'libros.categories', 'libros.picks', 'libros.topBooks', 'libros.recent',
   // Deportes
   'deportes.selected', 'deportes.otros',
   // Videojuegos
-  'videojuegos.categories', 'videojuegos.picks', 'videojuegos.favorites', 'videojuegos.videojuegosOtro',
+  'videojuegos.categories', 'videojuegos.picks', 'videojuegos.favorites',
   // Cierre
-  'diningStyle', 'dietary', 'dietaryNote', 'expPreference', 'planDays', 'planDaysOther',
+  'diningStyle', 'dietary', 'dietaryNote', 'expPreference',
   'rawJson',
 ];
 
@@ -67,7 +69,6 @@ const ARRAY_FIELDS = {
   'videojuegos.categories': true,
   'videojuegos.picks':    true,
   'deportes.selected':    true,
-  'planDaysOther':        true,
 };
 
 function getSpreadsheet_() {
