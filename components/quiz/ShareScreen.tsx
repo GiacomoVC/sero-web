@@ -6,6 +6,12 @@ import type { SubmitResult } from '@/lib/types';
 
 const URL_VIDEO_IG = 'https://www.instagram.com/reel/DZgDYizvuXr/?igsh=ZTNvOXZzMngyMDBs';
 
+const AVATAR_COLORS = [
+  'bg-peach text-[#B33E2E]',
+  'bg-lavender text-[#5B2D82]',
+  'bg-butter text-[#8A6A1A]',
+];
+
 const WA_ICON = (
   <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden>
     <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.8.9-1 1.1-.2.2-.4.2-.7 0-.3-.2-1.2-.5-2.4-1.5-.9-.8-1.5-1.8-1.6-2.1-.2-.3 0-.5.1-.7.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2.1-.4 0-.5-.1-.1-.7-1.7-1-2.3-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4 0-.1-.2-.2-.5-.3M12 21.5c-1.7 0-3.3-.5-4.7-1.3l-3.4 1 1-3.3c-1-1.5-1.5-3.2-1.5-5 0-5 4-9 9-9 2.4 0 4.6 1 6.3 2.6 1.7 1.7 2.6 3.9 2.6 6.3 0 5-4 8.9-8.9 8.9M21.6 5.4C19 2.9 15.6 1.5 12 1.5 4.6 1.5-1 7.1-1 14.5c0 2.4.6 4.7 1.8 6.7L0 28l6.9-1.8c2 1.1 4.2 1.6 6.4 1.6h.1c7.4 0 13.4-6 13.4-13.4 0-3.6-1.4-7-3.9-9.5"/>
@@ -110,32 +116,51 @@ export function ShareScreen({
       </div>
 
       {/* ── ¿Son amigos tuyos? ── */}
-      {matches.length > 0 && (
-        <div className="relative z-10 mt-8 w-full max-w-sm">
-          <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-3">¿Son amigos tuyos?</p>
+      <div className="relative z-10 mt-8 w-full max-w-sm">
+        <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-3">¿Son amigos tuyos?</p>
+        {matches.length > 0 ? (
           <div className="space-y-3">
             {matches.map((m, idx) => (
-              <div key={idx} className="flex items-center gap-3">
+              <div
+                key={idx}
+                className="flex items-center gap-3 bg-white/75 rounded-2xl border border-ink/8 px-4 py-3.5 shadow-sm"
+              >
+                {/* Avatar */}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-black shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
+                  {m.name.charAt(0).toUpperCase()}
+                </div>
+
+                {/* Name + mutual friend */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-ink text-sm leading-tight truncate">{m.name}</p>
+                  {m.mutualFriend && (
+                    <p className="text-ink/45 text-xs mt-0.5">Amigo en común: {m.mutualFriend}</p>
+                  )}
+                </div>
+
+                {/* Confirm button */}
                 <button
                   type="button"
                   onClick={() => toggleFriend(idx)}
-                  className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-bold transition-all ${
+                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
                     confirmedFriends.has(idx)
                       ? 'bg-plum text-white'
-                      : 'bg-white border-2 border-ink/15 text-ink hover:border-plum/40'
+                      : 'bg-ink/8 text-ink hover:bg-ink/15'
                   }`}
                 >
                   {confirmedFriends.has(idx) ? '¡Sí! ✓' : 'Confirmar'}
                 </button>
-                <span className="text-ink/80 text-sm">
-                  <span className="font-semibold">{m.name}</span>
-                  <span className="text-ink/40"> · {m.commonCount} en común</span>
-                </span>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="rounded-2xl border border-ink/8 bg-white/50 px-5 py-5 text-center">
+            <p className="text-ink/40 text-sm leading-relaxed">
+              Tus amigos aparecerán aquí cuando se unan con tu link.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* ── Link + share ── */}
       <div className="relative z-10 mt-8 w-full max-w-sm">

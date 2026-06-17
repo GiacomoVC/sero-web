@@ -128,6 +128,17 @@ function findMatches_(sh, newSlug, referredBy, newWorldsArr) {
   const data = sh.getRange(2, 1, lastRow - 1, COLUMNS.length).getValues();
   const newWorldsSet = new Set(newWorldsArr || []);
 
+  // Look up the referrer's first name to show "Amigo en común: [name]"
+  var referrerFirstName = '';
+  if (referredBy) {
+    for (var r = 0; r < data.length; r++) {
+      if (String(data[r][slugIdx] || '').trim() === referredBy) {
+        referrerFirstName = String(data[r][firstNameIdx] || '').trim();
+        break;
+      }
+    }
+  }
+
   const candidates = [];
 
   for (let i = 0; i < data.length; i++) {
@@ -141,27 +152,33 @@ function findMatches_(sh, newSlug, referredBy, newWorldsArr) {
     const rowWorldsStr  = String(row[worldsIdx] || '');
     const rowWorlds     = rowWorldsStr ? rowWorldsStr.split(', ').filter(Boolean) : [];
 
-    const commonCount = rowWorlds.filter(function(w) { return newWorldsSet.has(w); }).length;
-    const isPriority  = rowSlug === referredBy || (referredBy && rowReferredBy === referredBy);
+    const commonCount  = rowWorlds.filter(function(w) { return newWorldsSet.has(w); }).length;
+    const isReferrer   = rowSlug === referredBy;
+    const isCoReferral = !!(referredBy && rowReferredBy === referredBy);
+    const isPriority   = isReferrer || isCoReferral;
+
+    if (!isPriority && commonCount === 0) continue;
+
+    // Co-referrals share a mutual friend (the referrer).
+    // The referrer themselves directly invited you — no "en común" label needed.
+    const mutualFriend = isCoReferral && !isReferrer ? referrerFirstName : '';
 
     candidates.push({
       name: rowFirstName + (rowLastName ? ' ' + rowLastName : ''),
       commonCount: commonCount,
+      mutualFriend: mutualFriend,
       priority: isPriority ? 1 : 0,
     });
   }
 
-  // Priority first, then most worlds in common
   candidates.sort(function(a, b) {
     if (b.priority !== a.priority) return b.priority - a.priority;
     return b.commonCount - a.commonCount;
   });
 
-  // Return top 3 that are either priority or share at least 1 world
   return candidates
-    .filter(function(c) { return c.priority > 0 || c.commonCount > 0; })
     .slice(0, 3)
-    .map(function(c) { return { name: c.name, commonCount: c.commonCount }; });
+    .map(function(c) { return { name: c.name, commonCount: c.commonCount, mutualFriend: c.mutualFriend }; });
 }
 
 function doPost(e) {

@@ -26,7 +26,7 @@ function pickLoveExample(q: QuizResponses): string | undefined {
 
 type AppsScriptResponse = {
   slug: string;
-  matches?: Array<{ name: string; commonCount: number }>;
+  matches?: Array<{ name: string; commonCount: number; mutualFriend?: string }>;
 };
 
 async function reserveSlugViaAppsScript(
