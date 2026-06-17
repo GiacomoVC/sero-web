@@ -38,18 +38,10 @@ export function ShareScreen({
       ? `${window.location.origin}/${result.slug}`
       : result.url;
 
-  const shortUrl = shareUrl.replace(/^https?:\/\//, '');
   const matches = result.matches || [];
 
-  const [copied, setCopied] = useState(false);
   const [igCopied, setIgCopied] = useState(false);
   const [confirmedFriends, setConfirmedFriends] = useState<Set<number>>(new Set());
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(shareUrl).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const waMessage = [
     URL_VIDEO_IG,
@@ -104,17 +96,6 @@ export function ShareScreen({
         </p>
       </div>
 
-      {/* ── ¿Qué sigue? ── */}
-      <div className="relative z-10 mt-8 w-full max-w-sm bg-white/70 rounded-3xl px-6 py-5 border border-ink/8 shadow-sm">
-        <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-3">¿Qué sigue?</p>
-        <div className="space-y-2.5 text-sm text-ink/70 leading-snug">
-          <p>📝 Tus amigos llenan su quiz</p>
-          <p>👀 Cada semana armamos matches</p>
-          <p>🎴 Si varios coinciden, sale el plan</p>
-        </div>
-        <p className="mt-4 text-sm font-semibold text-ink/80">Todo por WhatsApp 💬</p>
-      </div>
-
       {/* ── ¿Son amigos tuyos? carousel ── */}
       <div className="relative z-10 mt-8 w-full">
         <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-3 px-6">
@@ -137,13 +118,9 @@ export function ShareScreen({
               <p className="mt-3 font-bold text-ink text-sm leading-tight">{m.name}</p>
 
               {/* Mutual friend */}
-              {m.mutualFriend ? (
+              {m.mutualFriend && (
                 <p className="mt-1.5 text-ink/40 text-xs leading-snug">
                   Amigo en común:<br />{m.mutualFriend}
-                </p>
-              ) : (
-                <p className="mt-1.5 text-ink/40 text-xs leading-snug">
-                  Te invitó a Sero
                 </p>
               )}
 
@@ -182,29 +159,23 @@ export function ShareScreen({
         )}
       </div>
 
-      {/* ── Link + share ── */}
-      <div className="relative z-10 mt-8 w-full max-w-sm">
-        <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-3">Tu link</p>
-
-        {/* URL display */}
-        <div className="flex items-center gap-2 rounded-2xl border-2 border-ink/10 bg-white/80 px-4 py-3">
-          <span className="text-ink/35 text-base select-none">🔗</span>
-          <span className="flex-1 min-w-0 text-ink/75 text-sm font-semibold truncate">
-            {shortUrl}
-          </span>
+      {/* ── ¿Qué sigue? ── */}
+      <div className="relative z-10 mt-8 w-full max-w-sm bg-white/70 rounded-3xl px-6 py-5 border border-ink/8 shadow-sm">
+        <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-3">¿Qué sigue?</p>
+        <div className="space-y-2.5 text-sm text-ink/70 leading-snug">
+          <p>📝 Tus amigos llenan su quiz</p>
+          <p>👀 Cada semana armamos matches</p>
+          <p>🎴 Si varios coinciden, sale el plan</p>
         </div>
+        <p className="mt-4 text-sm font-semibold text-ink/80">Todo por WhatsApp 💬</p>
+      </div>
 
-        {/* Copy button */}
-        <button
-          type="button"
-          onClick={copyLink}
-          className="mt-3 w-full rounded-2xl bg-ink text-white py-3.5 font-bold text-base hover:scale-[1.01] active:scale-[0.98] transition-transform"
-        >
-          {copied ? '¡Link copiado! ✓' : 'Copiar link'}
-        </button>
-
-        {/* Social share buttons */}
-        <div className="mt-4 flex justify-center gap-4">
+      {/* ── Invita a tus amigos ── */}
+      <div className="relative z-10 mt-8 w-full max-w-sm">
+        <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-4 text-center">
+          Invita a tus amigos
+        </p>
+        <div className="flex justify-center gap-4">
           <a
             href={waHref}
             target="_blank"
@@ -223,7 +194,6 @@ export function ShareScreen({
             {IG_ICON}
           </button>
         </div>
-
         {igCopied && (
           <p className="mt-3 text-center text-ink/45 text-xs animate-step-in">
             Texto copiado — pégalo en tu DM de IG 📋

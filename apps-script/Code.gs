@@ -177,7 +177,6 @@ function findMatches_(sh, newSlug, referredBy, newWorldsArr) {
   });
 
   return candidates
-    .slice(0, 3)
     .map(function(c) { return { name: c.name, commonCount: c.commonCount, mutualFriend: c.mutualFriend }; });
 }
 
