@@ -28,7 +28,6 @@ import { ShareScreen } from './ShareScreen';
 import { PreparingScreen } from './PreparingScreen';
 import { Confetti } from '../ui/Confetti';
 import { StickerNote } from '../ui/StickerNote';
-import { unlockAndPreload } from '@/lib/audioContext';
 
 type Step =
   | { kind: 'personal' }
@@ -227,12 +226,6 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    // Unlock the soundtrack AudioContext synchronously inside this click
-    // handler — iOS Safari only allows AudioContext.resume() / decodeAudioData
-    // playback inside a user-gesture. We're about to navigate to the share
-    // screen which renders the soundtrack-aware StoryCard.
-    unlockAndPreload();
-
     // submit
     setSubmitting(true);
     setError(null);
