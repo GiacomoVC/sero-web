@@ -293,8 +293,62 @@ function doPost(e) {
   }
 }
 
-function doGet() {
+function doGet(e) {
+  var action = e && e.parameter && e.parameter.action;
+  if (action === 'export') {
+    var expected = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');
+    if (expected && (e.parameter.secret || '') !== expected) {
+      return _json({ error: 'unauthorized' });
+    }
+    return _json(exportData_());
+  }
   return _json({ ok: true, service: 'sero-quiz-webhook' });
+}
+
+/**
+ * Full dump for the matching engine: every response (with its original quiz
+ * JSON parsed from rawJson) plus every confirmed friendship.
+ */
+function exportData_() {
+  var responses = [];
+  var sh = getSheet_();
+  var last = sh.getLastRow();
+  if (last >= 2) {
+    var slugIdx = COLUMNS.indexOf('slug');
+    var fnIdx   = COLUMNS.indexOf('firstName');
+    var lnIdx   = COLUMNS.indexOf('lastName');
+    var refIdx  = COLUMNS.indexOf('referredBy');
+    var rawIdx  = COLUMNS.indexOf('rawJson');
+    var data = sh.getRange(2, 1, last - 1, COLUMNS.length).getValues();
+    for (var i = 0; i < data.length; i++) {
+      var payload = {};
+      try { payload = data[i][rawIdx] ? JSON.parse(data[i][rawIdx]) : {}; } catch (_e) {}
+      responses.push({
+        slug:       String(data[i][slugIdx] || ''),
+        firstName:  String(data[i][fnIdx] || ''),
+        lastName:   String(data[i][lnIdx] || ''),
+        referredBy: String(data[i][refIdx] || ''),
+        payload:    payload,
+      });
+    }
+  }
+
+  var friendships = [];
+  var fsh = getFriendshipsSheet_();
+  var fl = fsh.getLastRow();
+  if (fl >= 2) {
+    var fFrom = FRIENDSHIP_COLUMNS.indexOf('fromSlug');
+    var fTo   = FRIENDSHIP_COLUMNS.indexOf('toSlug');
+    var fdata = fsh.getRange(2, 1, fl - 1, FRIENDSHIP_COLUMNS.length).getValues();
+    for (var j = 0; j < fdata.length; j++) {
+      friendships.push({
+        fromSlug: String(fdata[j][fFrom] || ''),
+        toSlug:   String(fdata[j][fTo] || ''),
+      });
+    }
+  }
+
+  return { responses: responses, friendships: friendships };
 }
 
 function _json(obj) {
