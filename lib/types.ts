@@ -70,5 +70,5 @@ export interface SubmitResult {
   igUrl: string;
   whatsappMessage: string;
   tags: string[];
-  matches?: Array<{ name: string; commonCount: number; mutualFriend?: string }>;
+  matches?: Array<{ slug: string; name: string; commonCount: number; mutualFriend?: string }>;
 }

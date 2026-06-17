@@ -22,6 +22,8 @@
  */
 
 const SHEET_NAME = 'responses';
+const FRIENDSHIPS_SHEET_NAME = 'friendships';
+const FRIENDSHIP_COLUMNS = ['timestamp', 'fromSlug', 'fromName', 'toSlug', 'toName', 'mutualFriend', 'commonCount'];
 
 const COLUMNS = [
   'timestamp', 'slug', 'referredBy',
@@ -79,6 +81,20 @@ function getSpreadsheet_() {
     'OR add SPREADSHEET_ID to Script Properties.'
   );
   return SpreadsheetApp.openById(id);
+}
+
+function getFriendshipsSheet_() {
+  const ss = getSpreadsheet_();
+  let sh = ss.getSheetByName(FRIENDSHIPS_SHEET_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(FRIENDSHIPS_SHEET_NAME);
+    sh.appendRow(FRIENDSHIP_COLUMNS);
+    sh.setFrozenRows(1);
+  } else if (sh.getLastRow() === 0) {
+    sh.appendRow(FRIENDSHIP_COLUMNS);
+    sh.setFrozenRows(1);
+  }
+  return sh;
 }
 
 function getSheet_() {
@@ -164,6 +180,7 @@ function findMatches_(sh, newSlug, referredBy, newWorldsArr) {
     const mutualFriend = isCoReferral && !isReferrer ? referrerFirstName : '';
 
     candidates.push({
+      slug: rowSlug,
       name: rowFirstName + (rowLastName ? ' ' + rowLastName : ''),
       commonCount: commonCount,
       mutualFriend: mutualFriend,
@@ -177,7 +194,44 @@ function findMatches_(sh, newSlug, referredBy, newWorldsArr) {
   });
 
   return candidates
-    .map(function(c) { return { name: c.name, commonCount: c.commonCount, mutualFriend: c.mutualFriend }; });
+    .map(function(c) { return { slug: c.slug, name: c.name, commonCount: c.commonCount, mutualFriend: c.mutualFriend }; });
+}
+
+function confirmFriend_(body) {
+  const sh = getFriendshipsSheet_();
+
+  // Look up the confirmer's full name from responses sheet
+  var fromName = '';
+  try {
+    var rsh = getSheet_();
+    var lastRow = rsh.getLastRow();
+    if (lastRow >= 2) {
+      var slugIdx   = COLUMNS.indexOf('slug');
+      var fnIdx     = COLUMNS.indexOf('firstName');
+      var lnIdx     = COLUMNS.indexOf('lastName');
+      var data      = rsh.getRange(2, 1, lastRow - 1, COLUMNS.length).getValues();
+      for (var i = 0; i < data.length; i++) {
+        if (String(data[i][slugIdx] || '').trim() === body.fromSlug) {
+          fromName = String(data[i][fnIdx] || '').trim();
+          var ln = String(data[i][lnIdx] || '').trim();
+          if (ln) fromName += ' ' + ln;
+          break;
+        }
+      }
+    }
+  } catch(e) { console.error('confirmFriend_: lookup error', String(e)); }
+
+  sh.appendRow([
+    new Date(),
+    body.fromSlug   || '',
+    fromName,
+    body.toSlug     || '',
+    body.toName     || '',
+    body.mutualFriend || '',
+    body.commonCount  || 0,
+  ]);
+
+  return _json({ ok: true });
 }
 
 function doPost(e) {
@@ -185,6 +239,13 @@ function doPost(e) {
     console.log('doPost: START');
 
     const body = JSON.parse(e.postData.contents || '{}');
+
+    if (body.action === 'confirmFriend') {
+      const expected = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');
+      if (expected && body.secret !== expected) return _json({ error: 'unauthorized' });
+      return confirmFriend_(body);
+    }
+
     console.log('doPost: desiredSlug =', body.desiredSlug);
 
     const expected = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');

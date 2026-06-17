@@ -74,12 +74,26 @@ export function ShareScreen({
     }
   };
 
-  const toggleFriend = (idx: number) => {
+  const toggleFriend = (idx: number, m: typeof matches[number]) => {
+    const isConfirming = !confirmedFriends.has(idx);
     setConfirmedFriends((prev) => {
       const next = new Set(prev);
       if (next.has(idx)) next.delete(idx); else next.add(idx);
       return next;
     });
+    if (isConfirming) {
+      fetch('/api/confirm-friend', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          fromSlug: result.slug,
+          toSlug: m.slug,
+          toName: m.name,
+          mutualFriend: m.mutualFriend || '',
+          commonCount: m.commonCount,
+        }),
+      }).catch(() => {});
+    }
   };
 
   return (
@@ -91,72 +105,6 @@ export function ShareScreen({
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-ink">
           ¡Estás dentro! 🎴
         </h1>
-        <p className="mt-3 text-ink/60 text-base max-w-xs mx-auto leading-relaxed">
-          Solo falta que se unan tus amigos. Para vivir un plan, tu gente tiene que estar.
-        </p>
-      </div>
-
-      {/* ── ¿Son amigos tuyos? carousel ── */}
-      <div className="relative z-10 mt-8 w-full">
-        <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-3 px-6">
-          ¿Son amigos tuyos?
-        </p>
-
-        {/* Scroll container — bleeds to screen edges */}
-        <div className="overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar flex gap-3 px-6">
-          {matches.length > 0 ? matches.map((m, idx) => (
-            <div
-              key={idx}
-              className="snap-start shrink-0 w-44 bg-white/80 rounded-3xl border border-ink/8 shadow-sm p-5 flex flex-col items-center text-center"
-            >
-              {/* Avatar */}
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
-                {m.name.charAt(0).toUpperCase()}
-              </div>
-
-              {/* Name */}
-              <p className="mt-3 font-bold text-ink text-sm leading-tight">{m.name}</p>
-
-              {/* Mutual friend */}
-              {m.mutualFriend && (
-                <p className="mt-1.5 text-ink/40 text-xs leading-snug">
-                  Amigo en común:<br />{m.mutualFriend}
-                </p>
-              )}
-
-              {/* Spacer */}
-              <div className="flex-1 min-h-[12px]" />
-
-              {/* Confirm button */}
-              <button
-                type="button"
-                onClick={() => toggleFriend(idx)}
-                className={`mt-4 w-full rounded-full py-2.5 text-xs font-bold transition-all active:scale-95 ${
-                  confirmedFriends.has(idx)
-                    ? 'bg-plum text-white shadow-sm'
-                    : 'bg-ink/8 text-ink hover:bg-ink/14'
-                }`}
-              >
-                {confirmedFriends.has(idx) ? '¡Sí! ✓' : 'Confirmar'}
-              </button>
-            </div>
-          )) : (
-            /* Placeholder card */
-            <div className="snap-start shrink-0 w-44 rounded-3xl border-2 border-dashed border-ink/12 p-5 flex flex-col items-center justify-center text-center min-h-[196px]">
-              <span className="text-3xl opacity-30">👥</span>
-              <p className="mt-3 text-ink/35 text-xs leading-snug">
-                Tus amigos aparecerán aquí cuando entren con tu link
-              </p>
-            </div>
-          )}
-
-          {/* Right-edge breathing room */}
-          <div className="shrink-0 w-3" aria-hidden />
-        </div>
-
-        {matches.length > 0 && (
-          <p className="mt-2 text-center text-ink/25 text-xs tracking-wide">desliza →</p>
-        )}
       </div>
 
       {/* ── ¿Qué sigue? ── */}
@@ -198,6 +146,61 @@ export function ShareScreen({
           <p className="mt-3 text-center text-ink/45 text-xs animate-step-in">
             Texto copiado — pégalo en tu DM de IG 📋
           </p>
+        )}
+      </div>
+
+      {/* ── ¿Son amigos tuyos? carousel ── */}
+      <div className="relative z-10 mt-8 w-full">
+        <p className="text-xs font-bold tracking-widest uppercase text-ink/35 mb-3 px-6">
+          ¿Son amigos tuyos?
+        </p>
+
+        <div className="overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar flex gap-3 px-6">
+          {matches.length > 0 ? matches.map((m, idx) => (
+            <div
+              key={idx}
+              className="snap-start shrink-0 w-44 bg-white/80 rounded-3xl border border-ink/8 shadow-sm p-5 flex flex-col items-center text-center"
+            >
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
+                {m.name.charAt(0).toUpperCase()}
+              </div>
+
+              <p className="mt-3 font-bold text-ink text-sm leading-tight">{m.name}</p>
+
+              {m.mutualFriend && (
+                <p className="mt-1.5 text-ink/40 text-xs leading-snug">
+                  Amigo en común:<br />{m.mutualFriend}
+                </p>
+              )}
+
+              <div className="flex-1 min-h-[12px]" />
+
+              <button
+                type="button"
+                onClick={() => toggleFriend(idx, m)}
+                className={`mt-4 w-full rounded-full py-2.5 text-xs font-bold transition-all active:scale-95 ${
+                  confirmedFriends.has(idx)
+                    ? 'bg-plum text-white shadow-sm'
+                    : 'bg-ink/8 text-ink hover:bg-ink/14'
+                }`}
+              >
+                {confirmedFriends.has(idx) ? '¡Sí! ✓' : 'Confirmar'}
+              </button>
+            </div>
+          )) : (
+            <div className="snap-start shrink-0 w-44 rounded-3xl border-2 border-dashed border-ink/12 p-5 flex flex-col items-center justify-center text-center min-h-[196px]">
+              <span className="text-3xl opacity-30">👥</span>
+              <p className="mt-3 text-ink/35 text-xs leading-snug">
+                Tus amigos aparecerán aquí cuando entren con tu link
+              </p>
+            </div>
+          )}
+
+          <div className="shrink-0 w-3" aria-hidden />
+        </div>
+
+        {matches.length > 0 && (
+          <p className="mt-2 text-center text-ink/25 text-xs tracking-wide">desliza →</p>
         )}
       </div>
 
