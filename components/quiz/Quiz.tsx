@@ -186,8 +186,9 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       const w = current.world;
       switch (w) {
         case 'musica':
-          // topArtists es opcional ("puedes saltar")
-          return !!(q.musica?.categories?.length);
+          if (!q.musica?.categories?.length) return false;
+          if (q.musica.categories.includes('Otro') && !q.musica.musicaOtro?.trim()) return false;
+          return true;
         case 'series':
           if (!q.series?.categories?.length) return false;
           if (q.series.categories.includes('Otro') && !q.series.seriesOtro?.trim()) return false;
@@ -202,16 +203,18 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
             q.anime?.current?.trim()
           );
         case 'libros':
-          // topBooks es opcional
-          return !!(q.libros?.categories?.length && q.libros?.recent?.trim());
+          if (!q.libros?.categories?.length || !q.libros?.recent?.trim()) return false;
+          if (q.libros.categories.includes('Otro') && !q.libros.librosOtro?.trim()) return false;
+          return true;
         case 'deportes':
           if (!q.deportes?.selected?.length) return false;
           if (q.deportes.selected.includes('otros') && !q.deportes.otros?.trim())
             return false;
           return true;
         case 'videojuegos':
-          // favorites es opcional
-          return !!(q.videojuegos?.categories?.length);
+          if (!q.videojuegos?.categories?.length) return false;
+          if (q.videojuegos.categories.includes('Otro') && !q.videojuegos.videojuegosOtro?.trim()) return false;
+          return true;
       }
     }
     return true;
@@ -581,7 +584,7 @@ function WorldStep({
   ) => void;
 }) {
   if (world === 'musica') {
-    const v = { categories: [] as string[], eras: [] as string[], topArtists: '', picks: [] as string[], ...q.musica };
+    const v = { categories: [] as string[], eras: [] as string[], topArtists: '', picks: [] as string[], musicaOtro: '', ...q.musica };
     return (
       <>
         <StepTitle title="🎧 Música" />
@@ -591,6 +594,18 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('musica', { categories: next })}
           />
+          {v.categories.includes('Otro') && (
+            <div className="animate-step-in">
+              <Field label="¿Qué otro género musical?">
+                <input
+                  className="input"
+                  placeholder="ej. Reggae, Bossa Nova, Ópera…"
+                  value={v.musicaOtro}
+                  onChange={(e) => updateWorld('musica', { musicaOtro: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
           <PicksChips
             world="musica"
             selectedCategories={v.categories}
@@ -771,7 +786,7 @@ function WorldStep({
     );
   }
   if (world === 'libros') {
-    const v = { categories: [] as string[], topBooks: '', recent: '', picks: [] as string[], ...q.libros };
+    const v = { categories: [] as string[], topBooks: '', recent: '', picks: [] as string[], librosOtro: '', ...q.libros };
     return (
       <>
         <StepTitle title="📚 Libros" />
@@ -781,6 +796,18 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('libros', { categories: next })}
           />
+          {v.categories.includes('Otro') && (
+            <div className="animate-step-in">
+              <Field label="¿Qué otro género?">
+                <input
+                  className="input"
+                  placeholder="ej. Autoayuda, Manga, Ensayo histórico…"
+                  value={v.librosOtro}
+                  onChange={(e) => updateWorld('libros', { librosOtro: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
           <PicksChips
             world="libros"
             selectedCategories={v.categories}
@@ -855,7 +882,7 @@ function WorldStep({
     );
   }
   if (world === 'videojuegos') {
-    const v = { categories: [] as string[], favorites: '', picks: [] as string[], ...q.videojuegos };
+    const v = { categories: [] as string[], favorites: '', picks: [] as string[], videojuegosOtro: '', ...q.videojuegos };
     return (
       <>
         <StepTitle title="🎮 Videojuegos" />
@@ -865,6 +892,18 @@ function WorldStep({
             value={v.categories}
             onChange={(next) => updateWorld('videojuegos', { categories: next })}
           />
+          {v.categories.includes('Otro') && (
+            <div className="animate-step-in">
+              <Field label="¿Qué otro estilo de videojuego?">
+                <input
+                  className="input"
+                  placeholder="ej. Party games, simuladores…"
+                  value={v.videojuegosOtro}
+                  onChange={(e) => updateWorld('videojuegos', { videojuegosOtro: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
           <PicksChips
             world="videojuegos"
             selectedCategories={v.categories}
@@ -888,6 +927,15 @@ function WorldStep({
   }
   return null;
 }
+
+const PLAN_DAYS_OPTS = [
+  { id: 'si_ambos',       label: 'Sí, ambos' },
+  { id: 'solo_martes',    label: 'Solo martes' },
+  { id: 'solo_miercoles', label: 'Solo miércoles' },
+  { id: 'otro_dia',       label: 'Otro día' },
+];
+
+const OTHER_DAYS = ['Lunes', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 function ClosingStep({
   q,
@@ -977,6 +1025,52 @@ function ClosingStep({
             ))}
           </div>
         </Field>
+      </div>
+
+      <div className="mt-6">
+        <Field label="En general, ¿llegas a ir a un plan un martes o miércoles por la noche?">
+          <div className="flex flex-wrap gap-2">
+            {PLAN_DAYS_OPTS.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => update('planDays', o.id)}
+                className={`chip ${
+                  q.planDays === o.id ? 'chip-active' : 'chip-idle'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+        {q.planDays === 'otro_dia' && (
+          <div className="mt-4 animate-step-in">
+            <Field label="¿Qué días?">
+              <div className="flex flex-wrap gap-2">
+                {OTHER_DAYS.map((day) => {
+                  const active = (q.planDaysOther || []).includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => {
+                        const current = q.planDaysOther || [];
+                        update('planDaysOther', active
+                          ? current.filter((d) => d !== day)
+                          : [...current, day]
+                        );
+                      }}
+                      className={`chip ${active ? 'chip-active' : 'chip-idle'}`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          </div>
+        )}
       </div>
     </>
   );

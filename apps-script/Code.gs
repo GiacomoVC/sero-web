@@ -28,7 +28,7 @@ const COLUMNS = [
   'firstName', 'lastName', 'city', 'age', 'whatsapp',
   'selectedWorlds', 'otrosMundos',
   // Música
-  'musica.categories', 'musica.picks', 'musica.eras', 'musica.topArtists',
+  'musica.categories', 'musica.picks', 'musica.eras', 'musica.topArtists', 'musica.musicaOtro',
   // Series
   'series.categories', 'series.picks', 'series.seriesOtro', 'series.region', 'series.favorites',
   // Películas
@@ -36,13 +36,13 @@ const COLUMNS = [
   // Anime
   'anime.categories', 'anime.picks', 'anime.preference', 'anime.favorites', 'anime.current',
   // Libros
-  'libros.categories', 'libros.picks', 'libros.topBooks', 'libros.recent',
+  'libros.categories', 'libros.picks', 'libros.topBooks', 'libros.recent', 'libros.librosOtro',
   // Deportes
   'deportes.selected', 'deportes.otros',
   // Videojuegos
-  'videojuegos.categories', 'videojuegos.picks', 'videojuegos.favorites',
+  'videojuegos.categories', 'videojuegos.picks', 'videojuegos.favorites', 'videojuegos.videojuegosOtro',
   // Cierre
-  'diningStyle', 'dietary', 'dietaryNote', 'expPreference',
+  'diningStyle', 'dietary', 'dietaryNote', 'expPreference', 'planDays', 'planDaysOther',
   'rawJson',
 ];
 
@@ -65,6 +65,7 @@ const ARRAY_FIELDS = {
   'videojuegos.categories': true,
   'videojuegos.picks':    true,
   'deportes.selected':    true,
+  'planDaysOther':        true,
 };
 
 function getSpreadsheet_() {
@@ -109,6 +110,60 @@ function resolveSlug_(sh, desired) {
   return `${desired}-${i}`;
 }
 
+/**
+ * After inserting a new user, scan the sheet for potential friend matches.
+ * Priority: the user's referrer and people referred by the same person.
+ * Ranked by shared selectedWorlds count.
+ */
+function findMatches_(sh, newSlug, referredBy, newWorldsArr) {
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+
+  const slugIdx       = COLUMNS.indexOf('slug');
+  const firstNameIdx  = COLUMNS.indexOf('firstName');
+  const lastNameIdx   = COLUMNS.indexOf('lastName');
+  const referredByIdx = COLUMNS.indexOf('referredBy');
+  const worldsIdx     = COLUMNS.indexOf('selectedWorlds');
+
+  const data = sh.getRange(2, 1, lastRow - 1, COLUMNS.length).getValues();
+  const newWorldsSet = new Set(newWorldsArr || []);
+
+  const candidates = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const rowSlug = String(row[slugIdx] || '').trim();
+    if (!rowSlug || rowSlug === newSlug) continue;
+
+    const rowFirstName  = String(row[firstNameIdx] || '').trim();
+    const rowLastName   = String(row[lastNameIdx] || '').trim();
+    const rowReferredBy = String(row[referredByIdx] || '').trim();
+    const rowWorldsStr  = String(row[worldsIdx] || '');
+    const rowWorlds     = rowWorldsStr ? rowWorldsStr.split(', ').filter(Boolean) : [];
+
+    const commonCount = rowWorlds.filter(function(w) { return newWorldsSet.has(w); }).length;
+    const isPriority  = rowSlug === referredBy || (referredBy && rowReferredBy === referredBy);
+
+    candidates.push({
+      name: rowFirstName + (rowLastName ? ' ' + rowLastName : ''),
+      commonCount: commonCount,
+      priority: isPriority ? 1 : 0,
+    });
+  }
+
+  // Priority first, then most worlds in common
+  candidates.sort(function(a, b) {
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    return b.commonCount - a.commonCount;
+  });
+
+  // Return top 3 that are either priority or share at least 1 world
+  return candidates
+    .filter(function(c) { return c.priority > 0 || c.commonCount > 0; })
+    .slice(0, 3)
+    .map(function(c) { return { name: c.name, commonCount: c.commonCount }; });
+}
+
 function doPost(e) {
   try {
     console.log('doPost: START');
@@ -150,7 +205,11 @@ function doPost(e) {
     sh.appendRow(row);
     console.log('doPost: row appended OK — slug:', slug);
 
-    return _json({ slug: slug });
+    const newWorldsArr = (payload.selectedWorlds || []);
+    const matches = findMatches_(sh, slug, payload.referredBy || '', newWorldsArr);
+    console.log('doPost: matches found =', matches.length);
+
+    return _json({ slug: slug, matches: matches });
   } catch (err) {
     console.error('doPost: ERROR —', String(err));
     return _json({ error: String(err) });

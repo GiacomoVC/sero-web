@@ -25,7 +25,7 @@ export function SectionFinal({ refSlug }: { refSlug?: string } = {}) {
           <Highlight variant="underline" color="plum">listos!</Highlight>
         </h2>
         <p className="text-ink/60 text-lg mt-6 leading-relaxed">
-          Sero los encuentra a través de tus amigos y mundos compartidos.
+          Sero lo hace realidad con amigos en común y mundos compartidos
         </p>
 
         {/* Polaroid + sticker cluster */}

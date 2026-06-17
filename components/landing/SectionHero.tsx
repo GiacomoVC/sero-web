@@ -73,7 +73,7 @@ export function SectionHero({ refSlug }: { refSlug?: string }) {
         </h1>
 
         <p className="mt-6 text-lg sm:text-xl font-bold text-ink/70 max-w-md mx-auto leading-relaxed">
-          ¿Cuándo fue la última vez que eso se volvió{' '}
+          ¿Hace cuánto que no se vuelve{' '}
           <Highlight variant="marker" color="coral">un plan</Highlight>?
         </p>
         <Link

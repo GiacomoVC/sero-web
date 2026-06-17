@@ -24,15 +24,19 @@ function pickLoveExample(q: QuizResponses): string | undefined {
   return tags[0];
 }
 
+type AppsScriptResponse = {
+  slug: string;
+  matches?: Array<{ name: string; commonCount: number }>;
+};
+
 async function reserveSlugViaAppsScript(
   desiredSlug: string,
   payload: QuizResponses
-): Promise<string> {
+): Promise<AppsScriptResponse> {
   const url = process.env.APPS_SCRIPT_URL;
   if (!url) {
-    // Local dev — no remote sheet. Echo the desired slug.
     console.log('[sero] (no APPS_SCRIPT_URL) would save:', { slug: desiredSlug, payload });
-    return desiredSlug;
+    return { slug: desiredSlug, matches: [] };
   }
   const res = await fetch(url, {
     method: 'POST',
@@ -46,9 +50,9 @@ async function reserveSlugViaAppsScript(
   if (!res.ok) {
     throw new Error(`Apps Script error: ${res.status}`);
   }
-  const data = (await res.json()) as { slug: string };
+  const data = (await res.json()) as AppsScriptResponse;
   if (!data?.slug) throw new Error('Apps Script returned no slug');
-  return data.slug;
+  return { slug: data.slug, matches: data.matches || [] };
 }
 
 export async function POST(req: Request) {
@@ -67,9 +71,9 @@ export async function POST(req: Request) {
   }
 
   const desiredSlug = toSlug(q.firstName, q.lastName);
-  let slug: string;
+  let scriptResponse: AppsScriptResponse;
   try {
-    slug = await reserveSlugViaAppsScript(desiredSlug, q);
+    scriptResponse = await reserveSlugViaAppsScript(desiredSlug, q);
   } catch (e) {
     console.error('[sero] submit failed:', e);
     return jsonUtf8(
@@ -78,6 +82,7 @@ export async function POST(req: Request) {
     );
   }
 
+  const { slug, matches } = scriptResponse;
   const base = getBaseUrl(req);
   const url = `${base}/${slug}`;
   const tags = extractTags(q, 6);
@@ -96,6 +101,7 @@ export async function POST(req: Request) {
     igUrl,
     whatsappMessage,
     tags,
+    matches,
   };
   return jsonUtf8(result);
 }

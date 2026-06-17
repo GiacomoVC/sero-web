@@ -38,7 +38,7 @@ export interface QuizResponses {
   // `picks` = chips chosen from the suggestion list driven by selected
   // categories. Optional — complements (does not replace) the free-text
   // fields below.
-  musica?: { categories: string[]; eras: string[]; topArtists: string; picks?: string[] };
+  musica?: { categories: string[]; eras: string[]; topArtists: string; picks?: string[]; musicaOtro?: string };
   series?: { categories: string[]; seriesOtro?: string; region: string[]; favorites?: string; picks?: string[] };
   peliculas?: { categories: string[]; tipo: string[]; favorites: string; picks?: string[] };
   anime?: {
@@ -48,15 +48,17 @@ export interface QuizResponses {
     current: string;
     picks?: string[];
   };
-  libros?: { categories: string[]; topBooks: string; recent: string; picks?: string[] };
+  libros?: { categories: string[]; topBooks: string; recent: string; picks?: string[]; librosOtro?: string };
   deportes?: { selected: Sport[]; otros?: string };
-  videojuegos?: { categories: string[]; favorites: string; picks?: string[] };
+  videojuegos?: { categories: string[]; favorites: string; picks?: string[]; videojuegosOtro?: string };
 
   // Closing preferences
   diningStyle: DiningStyle;
   dietary: Dietary;
   dietaryNote?: string;
   expPreference: ExpPreference;
+  planDays?: string;
+  planDaysOther?: string[];
 
   // Referral
   referredBy?: string;
@@ -68,4 +70,5 @@ export interface SubmitResult {
   igUrl: string;
   whatsappMessage: string;
   tags: string[];
+  matches?: Array<{ name: string; commonCount: number }>;
 }

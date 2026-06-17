@@ -19,22 +19,16 @@ export const PROCESS_STEPS: Step[] = [
   {
     num:    '01',
     icon:   '✍️',
-    title:  'Cuéntanos qué amas',
-    body:   'En un quiz de 5 minutos.',
+    title:  'Marca todo lo que amas',
+    body:   'Mundos, artistas, títulos',
     bubble: 'bg-peach',
     accent: 'text-[#B33E2E]',
   },
   {
     num:    '02',
     icon:   '📲',
-    title:  'Invita a tus amigos',
-    body:   (
-      <>
-        Así encontramos{' '}
-        <Highlight variant="underline" color="coral">gente que ama lo mismo</Highlight>{' '}
-        que tú. Nada de extraños.
-      </>
-    ),
+    title:  'Encontramos a tu gente',
+    body:   'Amigos que comparten tus gustos',
     bubble: 'bg-lavender',
     accent: 'text-[#5B2D82]',
     highlighted: true,
@@ -42,8 +36,8 @@ export const PROCESS_STEPS: Step[] = [
   {
     num:    '03',
     icon:   '🥂',
-    title:  'Vive mejores planes',
-    body:   'Sero se encarga de todo, tú solo disfruta.',
+    title:  'Vive tu plan',
+    body:   'Nos encargamos de todo, tú solo disfruta',
     bubble: 'bg-butter',
     accent: 'text-[#8A6A1A]',
   },
