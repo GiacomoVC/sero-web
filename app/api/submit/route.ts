@@ -63,14 +63,14 @@ export async function POST(req: Request) {
     return jsonUtf8({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  if (!q?.firstName || !q?.lastName) {
+  if (!q?.name || !q?.apellido) {
     return jsonUtf8(
-      { error: 'firstName and lastName are required' },
+      { error: 'name and apellido are required' },
       { status: 400 }
     );
   }
 
-  const desiredSlug = toSlug(q.firstName, q.lastName);
+  const desiredSlug = toSlug(q.name, q.apellido);
   let scriptResponse: AppsScriptResponse;
   try {
     scriptResponse = await reserveSlugViaAppsScript(desiredSlug, q);
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
   const url = `${base}/${slug}`;
   const tags = extractTags(q, 6);
   const igUrl = `${base}/api/og/${slug}?${new URLSearchParams({
-    n: q.firstName,
+    n: q.name,
     t: tags.join('|'),
   }).toString()}`;
   const whatsappMessage = buildWhatsAppMessage({

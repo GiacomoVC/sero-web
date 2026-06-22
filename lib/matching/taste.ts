@@ -1,4 +1,4 @@
-import type { QuizResponses } from '@/lib/types';
+import type { QuizSchema, TasteRecord } from '@/lib/types';
 import type { TasteTag, Tier } from './types';
 
 /** Normalize text into a stable match key: lowercase, no accents, alnum only. */
@@ -12,7 +12,6 @@ function norm(s: string): string {
     .trim();
 }
 
-/** Split a free-text answer into individual titles. Mirrors extractTags. */
 function splitFree(s?: string): string[] {
   if (!s) return [];
   return s
@@ -21,45 +20,22 @@ function splitFree(s?: string): string[] {
     .filter((x) => x.length > 1 && x.length <= 40);
 }
 
-function chips(arr?: string[]): string[] {
-  return (arr ?? []).filter((c) => c && c !== 'Otro');
-}
-
-const SPORT_LABELS: Record<string, string> = {
-  futbol: 'Fútbol',
-  basket: 'NBA',
-  tennis: 'Tenis',
-  f1: 'Fórmula 1',
-  combate: 'UFC / boxeo',
-  americanos: 'NFL / MLB',
+const WORLD_LABELS: Record<string, string> = {
+  musica: 'Música',
+  peliculas: 'Películas',
+  series: 'Series',
+  anime: 'Anime',
+  libros: 'Libros',
+  videojuegos: 'Videojuegos',
 };
-
-interface WorldSpec {
-  key: keyof QuizResponses;
-  label: string;
-  /** Array fields whose chips are category-level signals. */
-  catArrays: string[];
-  /** Array fields whose chips are controlled title-level signals. */
-  titleArrays: string[];
-  /** String fields to split into title-level signals. */
-  freeFields: string[];
-}
-
-const WORLDS: WorldSpec[] = [
-  { key: 'musica',      label: 'Música',      catArrays: ['categories', 'eras'], titleArrays: ['picks'], freeFields: ['topArtists'] },
-  { key: 'series',      label: 'Series',      catArrays: ['categories', 'region'], titleArrays: ['picks'], freeFields: ['favorites', 'seriesOtro'] },
-  { key: 'peliculas',   label: 'Películas',   catArrays: ['categories', 'tipo'], titleArrays: ['picks'], freeFields: ['favorites'] },
-  { key: 'anime',       label: 'Anime',       catArrays: ['categories'], titleArrays: ['picks'], freeFields: ['favorites', 'current'] },
-  { key: 'libros',      label: 'Libros',      catArrays: ['categories'], titleArrays: ['picks'], freeFields: ['topBooks', 'recent'] },
-  { key: 'videojuegos', label: 'Videojuegos', catArrays: ['categories'], titleArrays: ['picks'], freeFields: ['favorites'] },
-];
 
 /**
  * Turn a quiz response into a deduped map of taste tags, keyed for matching.
- * Categories and titles are namespaced by world so "Acción" in películas
- * never collides with "Acción" in series.
+ * NOTE: deliberately minimal — `typed` → title tier, `category/sub/eras` →
+ * category tier. The real signal-weighting redesign is a separate task; this
+ * only maps the new schema into the engine's existing TasteTag shape.
  */
-export function extractTaste(q: QuizResponses): Map<string, TasteTag> {
+export function extractTaste(q: QuizSchema): Map<string, TasteTag> {
   const tags = new Map<string, TasteTag>();
 
   const add = (world: string, label: string, raw: string, tier: Tier) => {
@@ -70,30 +46,29 @@ export function extractTaste(q: QuizResponses): Map<string, TasteTag> {
     tags.set(key, { key, display: `${label} · ${raw.trim()}`, tier });
   };
 
-  for (const w of WORLDS) {
-    const block = q[w.key] as Record<string, unknown> | undefined;
-    if (!block) continue;
+  const eat = (world: string, recs?: TasteRecord[]) => {
+    if (!recs) return;
+    const label = WORLD_LABELS[world] ?? world;
+    for (const r of recs) {
+      if (r.reaction !== 'love') continue;
+      if (r.category && r.category !== '✨ Otro') add(world, label, r.category, 'category');
+      for (const s of r.sub ?? []) add(world, label, s, 'category');
+      for (const t of r.typed ?? []) add(world, label, t, 'title');
+      for (const t of splitFree(r.otro)) add(world, label, t, 'title');
+    }
+  };
 
-    for (const f of w.catArrays) {
-      for (const v of chips(block[f] as string[] | undefined)) add(w.key, w.label, v, 'category');
-    }
-    for (const f of w.titleArrays) {
-      for (const v of chips(block[f] as string[] | undefined)) add(w.key, w.label, v, 'title');
-    }
-    for (const f of w.freeFields) {
-      for (const v of splitFree(block[f] as string | undefined)) add(w.key, w.label, v, 'title');
-    }
-  }
+  eat('musica', q.taste?.musica);
+  eat('peliculas', q.taste?.peliculas);
+  eat('series', q.taste?.series);
+  eat('anime', q.taste?.anime);
+  eat('libros', q.taste?.libros);
+  eat('videojuegos', q.taste?.videojuegos);
 
-  // Deportes: selected sports are category-level; free text is title-level.
-  if (q.deportes?.selected?.length) {
-    for (const s of q.deportes.selected) {
-      if (s === 'otros') continue;
-      const label = SPORT_LABELS[s];
-      if (label) add('deportes', 'Deportes', label, 'category');
-    }
-    for (const v of splitFree(q.deportes.otros)) add('deportes', 'Deportes', v, 'title');
+  if (q.taste?.deportes) {
+    for (const t of q.taste.deportes.typed ?? []) add('deportes', 'Deportes', t, 'title');
   }
+  for (const t of splitFree(q.taste?.otro)) add('otro', 'Otro', t, 'title');
 
   return tags;
 }

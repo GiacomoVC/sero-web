@@ -1,68 +1,94 @@
-export type World =
+// ─── Sero quiz schema (swipe-stories taste quiz) ────────────────────────────
+// Unified cross-world schema. The identity page + matching engine read this
+// shape directly, so field names and nesting here are the stable contract.
+
+export type WorldId =
   | 'musica'
-  | 'series'
   | 'peliculas'
+  | 'series'
   | 'anime'
   | 'libros'
-  | 'deportes'
   | 'videojuegos'
-  | 'otros';
+  | 'deportes'
+  | 'otro';
 
-export type Sport =
-  | 'futbol'
-  | 'basket'
-  | 'tennis'
-  | 'f1'
-  | 'combate'
-  | 'americanos'
-  | 'otros';
+export type Reaction = 'love' | 'pass';
 
-export type AnimeMangaPref = 'anime' | 'manga' | 'ambos';
-export type DiningStyle = 'hablar' | 'escuchar' | 'depende';
-export type Dietary = 'ninguna' | 'vegetariano' | 'vegano' | 'alergia';
-export type ExpPreference = 'solo_amigos' | 'plus_one' | 'cualquiera';
+/**
+ * One Layer-1 category card's result within a world.
+ *
+ * `sub` and `eras` are INDEPENDENT sibling arrays (never nested): they are two
+ * different signal types downstream — `sub` = category breadth, `eras` =
+ * bonding enrichment. `typed` = the costly precise-match signal.
+ */
+export interface TasteRecord {
+  /** Layer-1 card name, verbatim (e.g. "Indie / Alternative"). */
+  category: string;
+  /** Swipe result. Passes are kept — honest "not my world" data. */
+  reaction: Reaction;
+  /** Layer-2 adaptive multi-select: sub-genre / studio / region / origin. */
+  sub?: string[];
+  /** VIDEOJUEGOS social genres only — Consola / PC / Móvil. */
+  platform?: string[];
+  /** User-typed favorites — precise-match tier, high weight. */
+  typed?: string[];
+  /** VIDEOJUEGOS only — internal gathering tag from the card. */
+  plan_able?: boolean;
+  /** Free text from the "✨ Otro" card (category === "✨ Otro"). */
+  otro?: string;
+}
 
-export interface QuizResponses {
-  // Personal
-  firstName: string;
-  lastName: string;
-  city: string;
-  age: string;
+/** Deportes is intentionally simple — practiced/watched is its real axis. */
+export interface DeportesRecord {
+  relation: ('practico' | 'veo')[];
+  typed?: string[];
+}
+
+export interface QuizSchema {
+  // ── Lo básico ──
+  name: string;
+  apellido: string;
+  ciudad: string;
+  edad: string;
   whatsapp: string;
 
-  // Worlds
-  selectedWorlds: World[];
-  otrosMundos?: string;
+  /** Captured silently from ?ref in the URL. */
+  referred_by?: string;
 
-  // Per-world answers (categories = recall-aid multiselect, then open Qs)
-  // `picks` = chips chosen from the suggestion list driven by selected
-  // categories. Optional — complements (does not replace) the free-text
-  // fields below.
-  musica?: { categories: string[]; eras: string[]; topArtists: string; picks?: string[]; musicaOtro?: string };
-  series?: { categories: string[]; seriesOtro?: string; region: string[]; favorites?: string; picks?: string[] };
-  peliculas?: { categories: string[]; tipo: string[]; favorites: string; picks?: string[] };
-  anime?: {
-    categories: string[];
-    preference: AnimeMangaPref;
-    favorites: string;
-    current: string;
-    picks?: string[];
+  /** Worlds selected on page 2. Determines which sections appear. */
+  worlds: WorldId[];
+
+  // ── Per-world taste ──
+  taste: {
+    musica?: TasteRecord[];
+    peliculas?: TasteRecord[];
+    series?: TasteRecord[];
+    anime?: TasteRecord[];
+    libros?: TasteRecord[];
+    videojuegos?: TasteRecord[];
+    deportes?: DeportesRecord;
+    /** Heart-icon world → free text (high-signal identity). */
+    otro?: string;
   };
-  libros?: { categories: string[]; topBooks: string; recent: string; picks?: string[]; librosOtro?: string };
-  deportes?: { selected: Sport[]; otros?: string };
-  videojuegos?: { categories: string[]; favorites: string; picks?: string[]; videojuegosOtro?: string };
 
-  // Closing preferences
-  diningStyle: DiningStyle;
-  dietary: Dietary;
-  dietaryNote?: string;
-  expPreference: ExpPreference;
-  planDays?: string;
-  planDaysOther?: string[];
+  // ── Lo último ──
+  logistics: {
+    rol: 'hablar' | 'escuchar';
+    plus_one: boolean;
+    /** Low-effort availability bucket (was a 7-day multi-select). */
+    disponibilidad: 'entre_semana' | 'fin_de_semana' | 'cualquiera';
+    dieta: ('ninguna' | 'vegetariano' | 'vegano' | 'alergias')[];
+    dieta_note?: string;
+  };
 
-  // Referral
-  referredBy?: string;
+  created_at?: string;
 }
+
+/**
+ * Back-compat alias. Existing imports (`matching/*`, `extractTags`, `api/submit`)
+ * keep referencing `QuizResponses`, now pointing at the new schema.
+ */
+export type QuizResponses = QuizSchema;
 
 export interface SubmitResult {
   slug: string;
@@ -70,5 +96,10 @@ export interface SubmitResult {
   igUrl: string;
   whatsappMessage: string;
   tags: string[];
-  matches?: Array<{ slug: string; name: string; commonCount: number; mutualFriend?: string }>;
+  matches?: Array<{
+    slug: string;
+    name: string;
+    commonCount: number;
+    mutualFriend?: string;
+  }>;
 }

@@ -4,1084 +4,743 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Logo } from '../ui/Logo';
 import { ProgressBar } from './ProgressBar';
-import {
-  CATEGORIES,
-  MAX_WORLDS,
-  MUSIC_ERAS,
-  PELICULA_TIPOS,
-  SERIES_REGIONS,
-  SPORTS,
-  WORLDS,
-  suggestionsFor,
-} from '@/lib/worlds';
-import type {
-  AnimeMangaPref,
-  Dietary,
-  DiningStyle,
-  ExpPreference,
-  QuizResponses,
-  Sport,
-  SubmitResult,
-  World,
-} from '@/lib/types';
-import { ShareScreen } from './ShareScreen';
-import { PreparingScreen } from './PreparingScreen';
 import { Confetti } from '../ui/Confetti';
-import { StickerNote } from '../ui/StickerNote';
+import {
+  WORLDS,
+  SECTION_ORDER,
+  SECTIONS,
+  PLATFORM_OPTIONS,
+  OTRO_CARD,
+  STOP_LOVES,
+  STOP_PASS_STREAK,
+  DISPONIBILIDAD,
+  DIETAS,
+  first,
+  type SwipeWorldId,
+  type WorldSection,
+  type SubOption,
+} from '@/lib/worlds';
+import type { QuizSchema, Reaction, SubmitResult, TasteRecord, WorldId } from '@/lib/types';
 
-type Step =
-  | { kind: 'personal' }
-  | { kind: 'worlds' }
-  | { kind: 'world'; world: Exclude<World, 'otros'> }
-  | { kind: 'closing' };
-
-function emptyResponses(): QuizResponses {
-  return {
-    firstName: '',
-    lastName: '',
-    city: '',
-    age: '',
-    whatsapp: '',
-    selectedWorlds: [],
-    diningStyle: 'hablar',
-    dietary: 'ninguna',
-    expPreference: 'solo_amigos',
+// ─── Working draft ──────────────────────────────────────────────────────────
+type Draft = Omit<QuizSchema, 'logistics'> & {
+  logistics: {
+    rol?: 'hablar' | 'escuchar';
+    plus_one?: boolean;
+    disponibilidad?: 'entre_semana' | 'fin_de_semana' | 'cualquiera';
+    dieta: ('ninguna' | 'vegetariano' | 'vegano' | 'alergias')[];
+    dieta_note?: string;
   };
-}
-
-// ── Quiz state persistence (mobile refresh-safety) ──────────────────────────
-// Bump the version when QuizResponses' shape changes so stale data is dropped.
-const QUIZ_STORAGE_KEY = 'sero_quiz_state_v2';
-
-type SavedQuizState = {
-  q: QuizResponses;
-  stepIdx: number;
-  result: SubmitResult | null;
 };
 
-function loadSavedState(): SavedQuizState | null {
+function emptyDraft(): Draft {
+  return { name: '', apellido: '', ciudad: '', edad: '', whatsapp: '', worlds: [], taste: {}, logistics: { dieta: [] } };
+}
+
+// ─── Flow phases ────────────────────────────────────────────────────────────
+// On 'me encanta', the flow dives straight into THAT category's Layer 2 (sub-
+// options + picks), then 'continuar' resumes the swipe at the next card. Layer 2
+// is ONE page: its sub-options (with examples) AND the "¿qué … nos faltaron?"
+// field together. `detail.ci` is the swipe-deck index of the just-loved card.
+type Phase =
+  | { kind: 'personal' }
+  | { kind: 'worlds' }
+  | { kind: 'swipe'; wi: number; ci: number }
+  | { kind: 'otroCard'; wi: number }
+  | { kind: 'detail'; wi: number; ci: number }
+  | { kind: 'deportes' }
+  | { kind: 'logistics' };
+
+const STORAGE_KEY = 'sero_quiz_v5';
+type Saved = { q: Draft; phase: Phase };
+
+function loadSaved(): Saved | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as SavedQuizState;
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Saved) : null;
   } catch {
     return null;
   }
 }
-
-function saveState(state: SavedQuizState) {
+function persist(s: Saved) {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    /* quota / disabled — fail silently */
-  }
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  } catch {}
+}
+function clearSaved() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {}
 }
 
-function clearSavedState() {
-  if (typeof window === 'undefined') return;
-  try { window.localStorage.removeItem(QUIZ_STORAGE_KEY); } catch {}
+const parseTyped = (s: string): string[] => s.split(/[,\n;]+/).map((x) => x.trim()).filter(Boolean);
+function reactionOf(recs: TasteRecord[], name: string): Reaction | undefined {
+  return recs.find((r) => r.category === name)?.reaction;
 }
 
 export function Quiz({ referredBy }: { referredBy?: string }) {
   const router = useRouter();
   const params = useSearchParams();
-  const refFromQuery = params.get('ref') || undefined;
-  const ref = referredBy || refFromQuery;
+  const ref = referredBy || params.get('ref') || undefined;
 
-  const [stepIdx, setStepIdx] = useState(0);
-  const [q, setQ] = useState<QuizResponses>(() => ({
-    ...emptyResponses(),
-    referredBy: ref,
-  }));
-  const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<SubmitResult | null>(null);
-  const [storyBlob, setStoryBlob] = useState<File | null>(null);
-  const [storyReady, setStoryReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState<Draft>(() => ({ ...emptyDraft(), referred_by: ref }));
+  const [phase, setPhase] = useState<Phase>({ kind: 'personal' });
   const [hydrated, setHydrated] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [, setResult] = useState<SubmitResult | null>(null);
 
-  // Restore quiz state from localStorage on first mount. Runs AFTER SSR to
-  // avoid hydration mismatch — for the first paint we render the empty form
-  // (or a transient null), then swap in the saved state.
   useEffect(() => {
-    const saved = loadSavedState();
+    const saved = loadSaved();
     if (saved) {
-      setQ((prev) => ({ ...saved.q, referredBy: saved.q.referredBy ?? prev.referredBy }));
-      setStepIdx(saved.stepIdx);
-      if (saved.result) {
-        setResult(saved.result);
-        setStoryReady(true); // skip PreparingScreen — go straight to ShareScreen
-      }
+      setQ((prev) => ({ ...saved.q, referred_by: saved.q.referred_by ?? prev.referred_by }));
+      setPhase(saved.phase);
     }
     setHydrated(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-save on any change (debounced) so a refresh mid-quiz doesn't lose
-  // progress. Skipped before hydration to avoid clobbering the saved blob
-  // with the initial empty state.
   useEffect(() => {
-    if (!hydrated) return;
-    const id = setTimeout(() => {
-      saveState({ q, stepIdx, result });
-    }, 400);
+    if (!hydrated || done) return;
+    const id = setTimeout(() => persist({ q, phase }), 350);
     return () => clearTimeout(id);
-  }, [q, stepIdx, result, hydrated]);
+  }, [q, phase, hydrated, done]);
 
-  // Build the list of steps dynamically based on selected worlds
-  const steps: Step[] = useMemo(() => {
-    const base: Step[] = [{ kind: 'personal' }, { kind: 'worlds' }];
-    const worldSteps: Step[] = WORLDS.filter((w) =>
-      q.selectedWorlds.includes(w.id)
-    )
-      .filter((w): w is typeof w & { id: Exclude<World, 'otros'> } => w.id !== 'otros')
-      .map((w) => ({ kind: 'world' as const, world: w.id }));
-    return [...base, ...worldSteps, { kind: 'closing' }];
-  }, [q.selectedWorlds]);
+  const activeSections = useMemo<WorldSection[]>(
+    () => SECTION_ORDER.filter((id) => q.worlds.includes(id)).map((id) => SECTIONS[id]),
+    [q.worlds],
+  );
+  const deportesSelected = q.worlds.includes('deportes');
+  const otroSelected = q.worlds.includes('otro');
 
-  const totalSteps = steps.length;
-  const current = steps[stepIdx];
-  const progress = (stepIdx + 1) / (totalSteps + 1); // +1 to leave headroom for share
+  const setWorldRecords = (world: SwipeWorldId, recs: TasteRecord[]) =>
+    setQ((prev) => ({ ...prev, taste: { ...prev.taste, [world]: recs } }));
+  const upsert = (world: SwipeWorldId, category: string, patch: Partial<TasteRecord>) =>
+    setQ((prev) => {
+      const recs = [...(prev.taste[world] ?? [])];
+      const i = recs.findIndex((r) => r.category === category);
+      if (i >= 0) recs[i] = { ...recs[i], ...patch };
+      else recs.push({ category, reaction: 'pass', ...patch });
+      return { ...prev, taste: { ...prev.taste, [world]: recs } };
+    });
 
-  const update = <K extends keyof QuizResponses>(
-    key: K,
-    value: QuizResponses[K]
-  ) => setQ((prev) => ({ ...prev, [key]: value }));
-
-  const updateWorld = <W extends Exclude<World, 'otros'>>(
-    w: W,
-    patch: Partial<NonNullable<QuizResponses[W]>>
-  ) => {
-    setQ((prev) => ({
-      ...prev,
-      [w]: { ...(prev[w] as object), ...patch },
-    }) as QuizResponses);
+  const recsOf = (wi: number) => q.taste[activeSections[wi].id] ?? [];
+  const isStop = (section: WorldSection, recs: TasteRecord[], ci: number): boolean => {
+    let loves = 0;
+    let streak = 0;
+    for (let k = 0; k <= ci; k++) {
+      const r = reactionOf(recs, section.cards[k].name);
+      if (r === 'love') {
+        loves++;
+        streak = 0;
+      } else if (r === 'pass') streak++;
+    }
+    const lastCard = ci >= section.cards.length - 1;
+    return loves >= STOP_LOVES || (loves >= 1 && streak >= STOP_PASS_STREAK) || lastCard;
+  };
+  // A finished world's last screen is its ✨ Otro card (Layer 2s happen inline).
+  const endOfWorld = (wi: number): Phase => ({ kind: 'otroCard', wi });
+  const goToWorldOrBeyond = (nextWi: number) => {
+    if (nextWi < activeSections.length) setPhase({ kind: 'swipe', wi: nextWi, ci: 0 });
+    else if (deportesSelected) setPhase({ kind: 'deportes' });
+    else setPhase({ kind: 'logistics' });
   };
 
-  const canAdvance = (): boolean => {
-    if (!current) return false;
-    if (current.kind === 'personal') {
-      return (
-        q.firstName.trim().length > 0 &&
-        q.lastName.trim().length > 0 &&
-        q.city.trim().length > 0 &&
-        q.age.trim().length > 0 &&
-        q.whatsapp.trim().length > 0
-      );
+  const onSwipe = (reaction: Reaction) => {
+    if (phase.kind !== 'swipe') return;
+    const { wi, ci } = phase;
+    const section = activeSections[wi];
+    const card = section.cards[ci];
+    const recs = [...(q.taste[section.id] ?? [])];
+    const i = recs.findIndex((r) => r.category === card.name);
+    const base: TasteRecord = {
+      category: card.name,
+      reaction,
+      ...(section.id === 'videojuegos' ? { plan_able: !!card.planAble } : {}),
+    };
+    if (i >= 0) recs[i] = { ...recs[i], ...base };
+    else recs.push(base);
+    setWorldRecords(section.id, recs);
+
+    // Love → dive straight into this category's sub-options + picks.
+    // Pass → next card (or ✨ Otro once the stop condition is met).
+    if (reaction === 'love') {
+      setPhase({ kind: 'detail', wi, ci });
+      return;
     }
-    if (current.kind === 'worlds') {
-      if (q.selectedWorlds.length === 0) return false;
-      // Si marcó "Otros mundos", debe escribir en el textarea Y tener al menos 1 mundo más
-      if (q.selectedWorlds.includes('otros')) {
-        if (!q.otrosMundos?.trim()) return false;
-        if (q.selectedWorlds.filter((w) => w !== 'otros').length === 0) return false;
-      }
-      return true;
-    }
-    if (current.kind === 'closing') return true;
-    if (current.kind === 'world') {
-      const w = current.world;
-      switch (w) {
-        case 'musica':
-          if (!q.musica?.categories?.length) return false;
-          if (q.musica.categories.includes('Otro') && !q.musica.musicaOtro?.trim()) return false;
-          return true;
-        case 'series':
-          if (!q.series?.categories?.length) return false;
-          if (q.series.categories.includes('Otro') && !q.series.seriesOtro?.trim()) return false;
-          return true;
-        case 'peliculas':
-          return !!(q.peliculas?.categories?.length);
-        case 'anime':
-          // favorites es opcional; preference defaults to 'ambos' (matches the UI default)
-          return !!(
-            q.anime?.categories?.length &&
-            (q.anime?.preference ?? 'ambos') &&
-            q.anime?.current?.trim()
-          );
-        case 'libros':
-          if (!q.libros?.categories?.length || !q.libros?.recent?.trim()) return false;
-          if (q.libros.categories.includes('Otro') && !q.libros.librosOtro?.trim()) return false;
-          return true;
-        case 'deportes':
-          if (!q.deportes?.selected?.length) return false;
-          if (q.deportes.selected.includes('otros') && !q.deportes.otros?.trim())
-            return false;
-          return true;
-        case 'videojuegos':
-          if (!q.videojuegos?.categories?.length) return false;
-          if (q.videojuegos.categories.includes('Otro') && !q.videojuegos.videojuegosOtro?.trim()) return false;
-          return true;
-      }
-    }
-    return true;
+    setPhase(isStop(section, recs, ci) ? { kind: 'otroCard', wi } : { kind: 'swipe', wi, ci: ci + 1 });
   };
 
   const next = async () => {
     if (!canAdvance()) return;
-    if (stepIdx < totalSteps - 1) {
-      setStepIdx((i) => i + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    // submit
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(q),
-      });
-      if (!res.ok) throw new Error('No pudimos guardar tu respuesta.');
-      const data: SubmitResult = await res.json();
-
-      // The new ShareScreen doesn't preview a per-user video card anymore, so
-      // we no longer need to pre-fetch the IG story image. Go straight to it.
-      setResult(data);
-      setSubmitting(false);
-      setStoryReady(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error desconocido');
-      setSubmitting(false);
+    switch (phase.kind) {
+      case 'personal':
+        setPhase({ kind: 'worlds' });
+        return;
+      case 'worlds':
+        if (activeSections.length > 0) setPhase({ kind: 'swipe', wi: 0, ci: 0 });
+        else if (deportesSelected) setPhase({ kind: 'deportes' });
+        else setPhase({ kind: 'logistics' });
+        return;
+      case 'otroCard':
+        goToWorldOrBeyond(phase.wi + 1);
+        return;
+      case 'detail': {
+        const { wi, ci } = phase;
+        const section = activeSections[wi];
+        setPhase(isStop(section, q.taste[section.id] ?? [], ci) ? { kind: 'otroCard', wi } : { kind: 'swipe', wi, ci: ci + 1 });
+        return;
+      }
+      case 'deportes':
+        setPhase({ kind: 'logistics' });
+        return;
+      case 'logistics':
+        await submit();
+        return;
     }
   };
 
   const back = () => {
-    if (stepIdx > 0) {
-      setStepIdx((i) => i - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      router.push('/');
+    switch (phase.kind) {
+      case 'personal':
+        router.push('/');
+        return;
+      case 'worlds':
+        setPhase({ kind: 'personal' });
+        return;
+      case 'swipe': {
+        const { wi, ci } = phase;
+        if (ci > 0) {
+          const prev = activeSections[wi].cards[ci - 1];
+          setPhase(reactionOf(recsOf(wi), prev.name) === 'love' ? { kind: 'detail', wi, ci: ci - 1 } : { kind: 'swipe', wi, ci: ci - 1 });
+        } else if (wi > 0) setPhase(endOfWorld(wi - 1));
+        else setPhase({ kind: 'worlds' });
+        return;
+      }
+      case 'otroCard': {
+        const { wi } = phase;
+        const recs = recsOf(wi);
+        const reacted = activeSections[wi].cards.filter((c) => reactionOf(recs, c.name)).length;
+        const lastCi = Math.max(0, reacted - 1);
+        const lastCard = activeSections[wi].cards[lastCi];
+        setPhase(reactionOf(recs, lastCard.name) === 'love' ? { kind: 'detail', wi, ci: lastCi } : { kind: 'swipe', wi, ci: lastCi });
+        return;
+      }
+      case 'detail':
+        setPhase({ kind: 'swipe', wi: phase.wi, ci: phase.ci });
+        return;
+      case 'deportes':
+        if (activeSections.length > 0) setPhase(endOfWorld(activeSections.length - 1));
+        else setPhase({ kind: 'worlds' });
+        return;
+      case 'logistics':
+        if (deportesSelected) setPhase({ kind: 'deportes' });
+        else if (activeSections.length > 0) setPhase(endOfWorld(activeSections.length - 1));
+        else setPhase({ kind: 'worlds' });
+        return;
     }
   };
 
-  // Avoid a flash of the empty quiz on mobile refresh while we hydrate the
-  // saved state from localStorage. Renders null briefly (the Suspense
-  // fallback wrapping <Quiz/> already provides a blank backdrop).
-  if (!hydrated) return null;
+  const canAdvance = (): boolean => {
+    switch (phase.kind) {
+      case 'personal':
+        return [q.name, q.apellido, q.ciudad, q.edad, q.whatsapp].every((v) => v.trim() !== '');
+      case 'worlds':
+        if (q.worlds.length === 0) return false;
+        if (otroSelected && !q.taste.otro?.trim()) return false;
+        return true;
+      case 'logistics': {
+        const L = q.logistics;
+        if (!L.rol || L.plus_one === undefined || !L.disponibilidad) return false;
+        if (L.dieta.includes('alergias') && !L.dieta_note?.trim()) return false;
+        return true;
+      }
+      default:
+        return true;
+    }
+  };
 
-  if (result && storyReady) {
-    return <ShareScreen result={result} firstName={q.firstName} initialBlob={storyBlob} />;
-  }
-  if (result && !storyReady) {
-    return <PreparingScreen />;
-  }
+  const submit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const payload: QuizSchema = {
+        ...q,
+        taste: pruneTaste(q.taste),
+        logistics: {
+          rol: q.logistics.rol!,
+          plus_one: q.logistics.plus_one!,
+          disponibilidad: q.logistics.disponibilidad!,
+          dieta: q.logistics.dieta.length ? q.logistics.dieta : ['ninguna'],
+          dieta_note: q.logistics.dieta_note,
+        },
+        created_at: new Date().toISOString(),
+      };
+      const res = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('No pudimos guardar tu respuesta.');
+      const data: SubmitResult = await res.json();
+      setResult(data);
+      clearSaved();
+      setDone(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error desconocido');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const macroTotal = 2 + activeSections.length + (deportesSelected ? 1 : 0) + 1;
+  const macroIndex = (): number => {
+    switch (phase.kind) {
+      case 'personal':
+        return 0;
+      case 'worlds':
+        return 1;
+      case 'swipe': {
+        const len = activeSections[phase.wi].cards.length;
+        return 2 + phase.wi + (phase.ci / (len + 1)) * 0.85;
+      }
+      case 'detail': {
+        const len = activeSections[phase.wi].cards.length;
+        return 2 + phase.wi + ((phase.ci + 0.5) / (len + 1)) * 0.85;
+      }
+      case 'otroCard':
+        return 2 + phase.wi + 0.9;
+      case 'deportes':
+        return 2 + activeSections.length;
+      case 'logistics':
+        return 2 + activeSections.length + (deportesSelected ? 1 : 0);
+    }
+  };
+  const progress = Math.min(0.98, Math.max(0.03, macroIndex() / macroTotal));
+
+  if (!hydrated) return null;
+  if (done) return <DoneScreen />;
+
+  const isSwipe = phase.kind === 'swipe';
 
   return (
-    <div className="relative min-h-[100svh] flex flex-col bg-cream overflow-hidden">
-      {/* Subtle confetti backdrop — light density so it doesn't distract */}
-      <Confetti density="light" className="opacity-70" />
-
-      <header className="relative z-10 px-6 pt-8 sm:pt-12 max-w-2xl w-full mx-auto">
-        {current?.kind === 'personal' && (
-          <div className="relative flex flex-col items-center gap-3 mb-8">
-            <Logo width={180} priority />
-            <p className="text-ink/60 text-sm tracking-wide">
-              Mismos gustos, mejores planes.
-            </p>
-            <div className="hidden sm:block absolute -right-2 top-0">
-              <StickerNote color="butter" tilt={8} arrow="down-left">
-                empezamos<br />por ti →
-              </StickerNote>
-            </div>
-          </div>
-        )}
+    <div className="relative h-[100svh] flex flex-col bg-cream overflow-hidden">
+      <header className="relative z-10 px-6 pt-6 max-w-md w-full mx-auto shrink-0">
         <ProgressBar value={progress} />
       </header>
 
-      <main className="relative z-10 flex-1 px-6 py-10 max-w-2xl w-full mx-auto">
-        <div key={stepIdx} className="animate-step-in">
-          {current?.kind === 'personal' && (
-            <PersonalStep q={q} update={update} />
-          )}
-          {current?.kind === 'worlds' && <WorldsStep q={q} update={update} />}
-          {current?.kind === 'world' && (
-            <WorldStep world={current.world} q={q} updateWorld={updateWorld} />
-          )}
-          {current?.kind === 'closing' && <ClosingStep q={q} update={update} />}
+      <main className="relative z-10 flex-1 min-h-0 px-6 py-5 max-w-md w-full mx-auto overflow-hidden flex flex-col">
+        <div key={phaseKey(phase)} className="animate-step-in flex-1 min-h-0 flex flex-col">
+          {phase.kind === 'personal' && <PersonalStep q={q} setQ={setQ} />}
+          {phase.kind === 'worlds' && <WorldsStep q={q} setQ={setQ} />}
+          {phase.kind === 'swipe' && <SwipeStep section={activeSections[phase.wi]} ci={phase.ci} onSwipe={onSwipe} />}
+          {phase.kind === 'otroCard' && <OtroCardStep section={activeSections[phase.wi]} q={q} upsert={upsert} />}
+          {phase.kind === 'detail' && <DetailStep ci={phase.ci} section={activeSections[phase.wi]} q={q} upsert={upsert} />}
+          {phase.kind === 'deportes' && <DeportesStep q={q} setQ={setQ} />}
+          {phase.kind === 'logistics' && <LogisticsStep q={q} setQ={setQ} />}
         </div>
-
-        {error && (
-          <p className="mt-6 text-coral text-sm text-center">{error}</p>
-        )}
+        {error && <p className="mt-3 text-coral text-sm text-center shrink-0">{error}</p>}
       </main>
 
-      <footer className="relative z-10 sticky bottom-0 bg-cream/90 backdrop-blur border-t border-ink/10 px-6 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={back}
-            className="btn-ghost"
-            disabled={submitting}
-          >
-            ← Atrás
+      <footer className="relative z-10 px-6 pb-6 pt-2 max-w-md w-full mx-auto shrink-0 flex items-center justify-between gap-3">
+        <button type="button" onClick={back} className="btn-ghost" disabled={submitting}>
+          ← atrás
+        </button>
+        {!isSwipe && (
+          <button type="button" onClick={next} className="btn-primary" disabled={!canAdvance() || submitting}>
+            {submitting ? 'guardando…' : phase.kind === 'logistics' ? 'terminar' : 'continuar'}
           </button>
-          <button
-            type="button"
-            onClick={next}
-            className="btn-primary"
-            disabled={!canAdvance() || submitting}
-          >
-            {submitting
-              ? 'Guardando…'
-              : stepIdx === totalSteps - 1
-                ? 'Terminar'
-                : 'Continuar'}
-          </button>
-        </div>
+        )}
       </footer>
     </div>
   );
 }
 
-/* ---------- Step components ---------- */
+function phaseKey(p: Phase): string {
+  switch (p.kind) {
+    case 'swipe':
+      return `swipe-${p.wi}-${p.ci}`;
+    case 'detail':
+      return `detail-${p.wi}-${p.ci}`;
+    case 'otroCard':
+      return `otro-${p.wi}`;
+    default:
+      return p.kind;
+  }
+}
 
-function StepTitle({
-  title,
-  sub,
+function pruneTaste(taste: Draft['taste']): QuizSchema['taste'] {
+  const out: QuizSchema['taste'] = { ...taste };
+  (Object.keys(SECTIONS) as SwipeWorldId[]).forEach((w) => {
+    const recs = out[w];
+    if (!recs) return;
+    const cleaned = recs.filter((r) => r.category !== OTRO_CARD || (r.otro && r.otro.trim() !== ''));
+    if (cleaned.length) out[w] = cleaned;
+    else delete out[w];
+  });
+  return out;
+}
+
+/* ─────────────────────────  Story-slide primitives  ───────────────────────── */
+
+function SlideLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-ink/40 text-[11px] uppercase tracking-[0.25em] font-semibold shrink-0">{children}</p>;
+}
+function GhostField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  autoFocus,
+  inputMode,
 }: {
-  title: string;
-  sub?: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+  inputMode?: 'numeric' | 'tel';
 }) {
   return (
-    <div className="mb-8">
-      <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
-        {title}
-      </h1>
-      {sub && <p className="mt-2 text-ink/60">{sub}</p>}
+    <label className="block">
+      <span className="block text-xs uppercase tracking-wider font-semibold text-ink/45 mb-1">{label}</span>
+      <input
+        className="input-ghost"
+        value={value}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        inputMode={inputMode}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
+
+/* ─────────────────────────  Steps  ───────────────────────── */
+
+// ── Page 1 ──
+function PersonalStep({ q, setQ }: { q: Draft; setQ: React.Dispatch<React.SetStateAction<Draft>> }) {
+  const set = (k: keyof Draft, v: string) => setQ((p) => ({ ...p, [k]: v }));
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex justify-center mb-6 shrink-0">
+        <Logo width={130} priority />
+      </div>
+      <h1 className="text-4xl font-black tracking-tight leading-none mb-7 shrink-0">lo básico</h1>
+      <div className="space-y-5">
+        <GhostField label="nombre" value={q.name} onChange={(v) => set('name', v)} placeholder="Juan" autoFocus />
+        <GhostField label="apellido" value={q.apellido} onChange={(v) => set('apellido', v)} placeholder="Pérez" />
+        <GhostField label="ciudad" value={q.ciudad} onChange={(v) => set('ciudad', v)} placeholder="Lima" />
+        <GhostField label="edad" value={q.edad} onChange={(v) => set('edad', v.replace(/[^0-9]/g, ''))} placeholder="24" inputMode="numeric" />
+        <GhostField label="WhatsApp" value={q.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="999 111 222" inputMode="tel" />
+      </div>
     </div>
   );
 }
 
-function PersonalStep({
-  q,
-  update,
-}: {
-  q: QuizResponses;
-  update: <K extends keyof QuizResponses>(k: K, v: QuizResponses[K]) => void;
-}) {
-  return (
-    <>
-      <StepTitle title="Lo básico 👇" />
-      <div className="space-y-4">
-        <Field label="Nombre">
-          <input
-            className="input"
-            placeholder="Juan"
-            value={q.firstName}
-            onChange={(e) => update('firstName', e.target.value)}
-            autoFocus
-          />
-        </Field>
-        <Field label="Apellido">
-          <input
-            className="input"
-            placeholder="Perez"
-            value={q.lastName}
-            onChange={(e) => update('lastName', e.target.value)}
-          />
-        </Field>
-        <Field label="Ciudad">
-          <input
-            className="input"
-            placeholder="Lima"
-            value={q.city}
-            onChange={(e) => update('city', e.target.value)}
-          />
-        </Field>
-        <Field label="Edad">
-          <input
-            className="input"
-            inputMode="numeric"
-            placeholder="24"
-            value={q.age}
-            onChange={(e) =>
-              update('age', e.target.value.replace(/[^0-9]/g, ''))
-            }
-          />
-        </Field>
-        <Field label="WhatsApp">
-          <input
-            className="input"
-            inputMode="tel"
-            placeholder="51 924923921"
-            value={q.whatsapp}
-            onChange={(e) => update('whatsapp', e.target.value)}
-          />
-        </Field>
-      </div>
-    </>
-  );
-}
+// ── Page 2 ──
+function WorldsStep({ q, setQ }: { q: Draft; setQ: React.Dispatch<React.SetStateAction<Draft>> }) {
+  const name = q.name.trim() || 'ti';
+  const toggle = (id: WorldId) =>
+    setQ((p) => ({ ...p, worlds: p.worlds.includes(id) ? p.worlds.filter((w) => w !== id) : [...p.worlds, id] }));
+  const otroOn = q.worlds.includes('otro');
 
-function WorldsStep({
-  q,
-  update,
-}: {
-  q: QuizResponses;
-  update: <K extends keyof QuizResponses>(k: K, v: QuizResponses[K]) => void;
-}) {
-  const toggle = (id: World) => {
-    const has = q.selectedWorlds.includes(id);
-    let next = has
-      ? q.selectedWorlds.filter((w) => w !== id)
-      : [...q.selectedWorlds, id];
-    if (next.length > MAX_WORLDS) next = next.slice(0, MAX_WORLDS);
-    update('selectedWorlds', next);
-  };
-
-  const otrosSelected = q.selectedWorlds.includes('otros');
+  // Shrink the title so a long name still fits on a single line.
+  const title = `¿qué ama ${name}?`;
+  const titleSize =
+    title.length <= 16 ? 'text-4xl' : title.length <= 20 ? 'text-3xl' : title.length <= 26 ? 'text-2xl' : 'text-xl';
 
   return (
-    <>
-      <StepTitle
-        title="Tus mundos"
-        sub={`elige hasta ${MAX_WORLDS}`}
-      />
-      <div className="flex flex-wrap gap-2.5">
+    <div className="flex-1 min-h-0 flex flex-col">
+      <h1 className={`${titleSize} font-black tracking-tight leading-[1.05] mb-6 shrink-0 whitespace-nowrap`}>{title}</h1>
+      <div className="grid grid-cols-2 gap-3">
         {WORLDS.map((w) => {
-          const active = q.selectedWorlds.includes(w.id);
+          const active = q.worlds.includes(w.id);
           return (
             <button
               key={w.id}
               type="button"
               onClick={() => toggle(w.id)}
-              className={`chip ${active ? 'chip-active' : 'chip-idle'}`}
+              className={`flex items-center gap-2.5 rounded-2xl px-4 py-4 text-base font-bold transition-all active:scale-[0.97] ${
+                active ? 'bg-coral text-white shadow-[0_5px_0_rgba(91,45,130,0.18)] -translate-y-0.5' : 'bg-white/70 text-ink hover:bg-white'
+              }`}
             >
-              <span>{w.emoji}</span>
+              <span className="text-2xl">{w.emoji}</span>
               <span>{w.label}</span>
             </button>
           );
         })}
       </div>
-
-      {otrosSelected && (
+      {otroOn && (
         <div className="mt-6 animate-step-in">
-          {q.selectedWorlds.filter((w) => w !== 'otros').length === 0 && (
-            <p className="mb-3 text-xs text-coral/80">
-              También elige al menos un mundo de arriba para continuar.
-            </p>
-          )}
-          <Field label="¿Cuáles? Cuéntanos qué te apasiona">
-            <textarea
-              className="input min-h-[100px]"
-              placeholder="Moda, arte, astronomía, etc."
-              value={q.otrosMundos || ''}
-              onChange={(e) => update('otrosMundos', e.target.value)}
-            />
-          </Field>
+          <GhostField label="cuéntanos" value={q.taste.otro ?? ''} onChange={(v) => setQ((p) => ({ ...p, taste: { ...p.taste, otro: v } }))} placeholder="comida, arte…" autoFocus />
         </div>
       )}
-
-      <p className="mt-6 text-ink/50 text-sm">
-        Seleccionados: {q.selectedWorlds.length}/{MAX_WORLDS}
-      </p>
-    </>
+    </div>
   );
 }
 
-function CategoryChips({
-  options,
-  value,
-  onChange,
-  label = 'Marca todos los que amas.',
-}: {
-  options: string[];
-  value: string[];
-  onChange: (next: string[]) => void;
-  label?: string;
-}) {
-  const toggle = (opt: string) => {
-    onChange(value.includes(opt) ? value.filter((o) => o !== opt) : [...value, opt]);
-  };
+// ── Layer 1 swipe — the genre IS the slide (no box) ──
+function SwipeStep({ section, ci, onSwipe }: { section: WorldSection; ci: number; onSwipe: (r: Reaction) => void }) {
+  const card = section.cards[ci];
   return (
-    <Field label={label}>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const active = value.includes(opt);
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => toggle(opt)}
-              className={`chip ${active ? 'chip-active' : 'chip-idle'}`}
-            >
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-    </Field>
-  );
-}
+    <div className="flex-1 min-h-0 flex flex-col">
+      <SlideLabel>
+        {section.emoji} {section.label} · {ci + 1}
+      </SlideLabel>
 
-/**
- * Quick-pick chips driven by the user's selected categories. Hidden until at
- * least one category is chosen, since the suggestion list depends on it.
- */
-function PicksChips({
-  world,
-  selectedCategories,
-  value,
-  onChange,
-  label,
-}: {
-  world: Exclude<World, 'otros' | 'deportes'>;
-  selectedCategories: string[];
-  value: string[];
-  onChange: (next: string[]) => void;
-  label: string;
-}) {
-  const options = useMemo(
-    () => suggestionsFor(world, selectedCategories),
-    [world, selectedCategories],
-  );
-  if (options.length === 0) return null;
-  const toggle = (opt: string) => {
-    onChange(value.includes(opt) ? value.filter((o) => o !== opt) : [...value, opt]);
-  };
-  return (
-    <Field label={label}>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const active = value.includes(opt);
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => toggle(opt)}
-              className={`chip ${active ? 'chip-active' : 'chip-idle'}`}
-            >
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-    </Field>
-  );
-}
-
-function WorldStep({
-  world,
-  q,
-  updateWorld,
-}: {
-  world: Exclude<World, 'otros'>;
-  q: QuizResponses;
-  updateWorld: <W extends Exclude<World, 'otros'>>(
-    w: W,
-    patch: Partial<NonNullable<QuizResponses[W]>>
-  ) => void;
-}) {
-  if (world === 'musica') {
-    const v = { categories: [] as string[], eras: [] as string[], topArtists: '', picks: [] as string[], musicaOtro: '', ...q.musica };
-    return (
-      <>
-        <StepTitle title="🎧 Música" />
-        <div className="space-y-6">
-          <CategoryChips
-            options={CATEGORIES.musica}
-            value={v.categories}
-            onChange={(next) => updateWorld('musica', { categories: next })}
-          />
-          {v.categories.includes('Otro') && (
-            <div className="animate-step-in">
-              <Field label="¿Qué otro género musical?">
-                <input
-                  className="input"
-                  placeholder="ej. Reggae, Bossa Nova, Ópera…"
-                  value={v.musicaOtro}
-                  onChange={(e) => updateWorld('musica', { musicaOtro: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-          <PicksChips
-            world="musica"
-            selectedCategories={v.categories}
-            value={v.picks ?? []}
-            onChange={(next) => updateWorld('musica', { picks: next })}
-            label="¿Cuáles de estos te encantan?"
-          />
-          <CategoryChips
-            label="¿Qué épocas te gustan más?"
-            options={MUSIC_ERAS}
-            value={v.eras}
-            onChange={(next) => updateWorld('musica', { eras: next })}
-          />
-          <Field label="(OPCIONAL) ¿Algún artista más que amas y no está arriba?">
-            <input
-              className="input"
-              placeholder="ej, Billie Eilish, Elton John"
-              value={v.topArtists}
-              onChange={(e) =>
-                updateWorld('musica', { topArtists: e.target.value })
-              }
-            />
-          </Field>
-        </div>
-      </>
-    );
-  }
-  if (world === 'series') {
-    const v = { categories: [] as string[], seriesOtro: '', region: [] as string[], favorites: '', picks: [] as string[], ...q.series };
-    return (
-      <>
-        <StepTitle title="📺 Series" />
-        <div className="space-y-6">
-          <CategoryChips
-            options={CATEGORIES.series}
-            value={v.categories}
-            onChange={(next) => updateWorld('series', { categories: next })}
-          />
-          {v.categories.includes('Otro') && (
-            <Field label="¿Qué otro género?">
-              <input
-                className="input"
-                placeholder="Escribe aquí"
-                value={v.seriesOtro || ''}
-                onChange={(e) =>
-                  updateWorld('series', { seriesOtro: e.target.value })
-                }
-              />
-            </Field>
-          )}
-          <PicksChips
-            world="series"
-            selectedCategories={v.categories}
-            value={v.picks ?? []}
-            onChange={(next) => updateWorld('series', { picks: next })}
-            label="¿Cuáles de estas te enganchan?"
-          />
-          <CategoryChips
-            label="Región de tus series favoritas:"
-            options={SERIES_REGIONS}
-            value={v.region}
-            onChange={(next) => updateWorld('series', { region: next })}
-          />
-          <Field label="(OPCIONAL) ¿Alguna otra serie?">
-            <input
-              className="input"
-              placeholder="ej, The Bear, Severance"
-              value={v.favorites || ''}
-              onChange={(e) =>
-                updateWorld('series', { favorites: e.target.value })
-              }
-            />
-          </Field>
-        </div>
-      </>
-    );
-  }
-  if (world === 'peliculas') {
-    const v = { categories: [] as string[], tipo: [] as string[], favorites: '', picks: [] as string[], ...q.peliculas };
-    return (
-      <>
-        <StepTitle title="🎬 Películas" />
-        <div className="space-y-6">
-          <CategoryChips
-            options={CATEGORIES.peliculas}
-            value={v.categories}
-            onChange={(next) => updateWorld('peliculas', { categories: next })}
-          />
-          <PicksChips
-            world="peliculas"
-            selectedCategories={v.categories}
-            value={v.picks ?? []}
-            onChange={(next) => updateWorld('peliculas', { picks: next })}
-            label="¿Cuáles de estas te marcaron?"
-          />
-          <CategoryChips
-            label="¿Qué tipo? Todas las que te gusten"
-            options={PELICULA_TIPOS}
-            value={v.tipo}
-            onChange={(next) => updateWorld('peliculas', { tipo: next })}
-          />
-          <Field label="(OPCIONAL) ¿Alguna otra peli o director que amas?">
-            <input
-              className="input"
-              placeholder="ej. Tarantino, Interestelar, El padrino…"
-              value={v.favorites}
-              onChange={(e) =>
-                updateWorld('peliculas', { favorites: e.target.value })
-              }
-            />
-          </Field>
-        </div>
-      </>
-    );
-  }
-  if (world === 'anime') {
-    const v =
-      { categories: [] as string[], preference: 'ambos' as AnimeMangaPref, favorites: '', current: '', picks: [] as string[], ...q.anime };
-    const opts: { id: AnimeMangaPref; label: string }[] = [
-      { id: 'anime', label: 'Anime' },
-      { id: 'manga', label: 'Manga' },
-      { id: 'ambos', label: 'Ambos' },
-    ];
-    return (
-      <>
-        <StepTitle title="🀄 Anime / Manga" />
-        <div className="space-y-6">
-          <CategoryChips
-            options={CATEGORIES.anime}
-            value={v.categories}
-            onChange={(next) => updateWorld('anime', { categories: next })}
-          />
-          <PicksChips
-            world="anime"
-            selectedCategories={v.categories}
-            value={v.picks ?? []}
-            onChange={(next) => updateWorld('anime', { picks: next })}
-            label="¿Cuáles te has clavado?"
-          />
-          <Field label="¿Qué prefieres?">
-            <div className="flex flex-wrap gap-2">
-              {opts.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => updateWorld('anime', { preference: o.id })}
-                  className={`chip ${
-                    v.preference === o.id ? 'chip-active' : 'chip-idle'
-                  }`}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </Field>
-          <Field label="Pon 1 o más favoritos (puedes saltar)">
-            <textarea
-              className="input min-h-[60px]"
-              placeholder="ej. One Piece"
-              value={v.favorites}
-              onChange={(e) =>
-                updateWorld('anime', { favorites: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="¿Qué estás viendo o leyendo últimamente?">
-            <input
-              className="input"
-              placeholder="Chainsaw Man, Frieren, Vagabond, …"
-              value={v.current}
-              onChange={(e) =>
-                updateWorld('anime', { current: e.target.value })
-              }
-            />
-          </Field>
-        </div>
-      </>
-    );
-  }
-  if (world === 'libros') {
-    const v = { categories: [] as string[], topBooks: '', recent: '', picks: [] as string[], librosOtro: '', ...q.libros };
-    return (
-      <>
-        <StepTitle title="📚 Libros" />
-        <div className="space-y-6">
-          <CategoryChips
-            options={CATEGORIES.libros}
-            value={v.categories}
-            onChange={(next) => updateWorld('libros', { categories: next })}
-          />
-          {v.categories.includes('Otro') && (
-            <div className="animate-step-in">
-              <Field label="¿Qué otro género?">
-                <input
-                  className="input"
-                  placeholder="ej. Autoayuda, Manga, Ensayo histórico…"
-                  value={v.librosOtro}
-                  onChange={(e) => updateWorld('libros', { librosOtro: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-          <PicksChips
-            world="libros"
-            selectedCategories={v.categories}
-            value={v.picks ?? []}
-            onChange={(next) => updateWorld('libros', { picks: next })}
-            label="¿Cuáles de estos autores / libros te gustan?"
-          />
-          <Field label="(OPCIONAL) Otros libros o autores que amas">
-            <textarea
-              className="input min-h-[60px]"
-              placeholder="ej. Borges, o Dune"
-              value={v.topBooks}
-              onChange={(e) =>
-                updateWorld('libros', { topBooks: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="¿Qué libro estás leyendo / leíste hace poco que te atrapó?">
-            <input
-              className="input"
-              placeholder="Kafka en la orilla, Pachinko, …"
-              value={v.recent}
-              onChange={(e) =>
-                updateWorld('libros', { recent: e.target.value })
-              }
-            />
-          </Field>
-        </div>
-      </>
-    );
-  }
-  if (world === 'deportes') {
-    const v = q.deportes || { selected: [] as Sport[] };
-    const toggle = (id: Sport) => {
-      const has = v.selected.includes(id);
-      const sel = has ? v.selected.filter((s) => s !== id) : [...v.selected, id];
-      updateWorld('deportes', { selected: sel });
-    };
-    return (
-      <>
-        <StepTitle title="⚽ Deportes" />
-        <div className="flex flex-wrap gap-2.5">
-          {SPORTS.map((s) => {
-            const active = v.selected.includes(s.id);
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => toggle(s.id)}
-                className={`chip ${active ? 'chip-active' : 'chip-idle'}`}
-              >
-                {s.label}
-              </button>
-            );
-          })}
-        </div>
-        {v.selected.includes('otros') && (
-          <div className="mt-5 animate-step-in">
-            <Field label="Otros deportes">
-              <input
-                className="input"
-                placeholder="Dinos cuáles"
-                value={v.otros || ''}
-                onChange={(e) =>
-                  updateWorld('deportes', { otros: e.target.value })
-                }
-              />
-            </Field>
-          </div>
+      <div className="flex-1 min-h-0 flex flex-col justify-center">
+        <h2 className="text-5xl font-black tracking-tight leading-[0.95]">
+          {card.emoji ? `${card.emoji} ` : ''}
+          {card.name}
+        </h2>
+        {section.id === 'musica' && card.subGenres ? (
+          <ul className="mt-6 space-y-2.5">
+            {card.subGenres.map((sg) => (
+              <li key={sg.name} className="text-lg leading-tight">
+                <span className="font-bold text-ink">{sg.name}</span>
+                <span className="text-ink/35"> · {first(sg.examples)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : card.example && card.example.includes(',') ? (
+          <ul className="mt-5 space-y-2">
+            {card.example.split(',').map((e) => (
+              <li key={e} className="text-xl text-ink/40 leading-tight">
+                {e.trim()}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          card.example && <p className="mt-5 text-2xl text-ink/35">{card.example}</p>
         )}
-      </>
-    );
-  }
-  if (world === 'videojuegos') {
-    const v = { categories: [] as string[], favorites: '', picks: [] as string[], videojuegosOtro: '', ...q.videojuegos };
-    return (
-      <>
-        <StepTitle title="🎮 Videojuegos" />
-        <div className="space-y-6">
-          <CategoryChips
-            options={CATEGORIES.videojuegos}
-            value={v.categories}
-            onChange={(next) => updateWorld('videojuegos', { categories: next })}
-          />
-          {v.categories.includes('Otro') && (
-            <div className="animate-step-in">
-              <Field label="¿Qué otro estilo de videojuego?">
-                <input
-                  className="input"
-                  placeholder="ej. Party games, simuladores…"
-                  value={v.videojuegosOtro}
-                  onChange={(e) => updateWorld('videojuegos', { videojuegosOtro: e.target.value })}
-                />
-              </Field>
-            </div>
-          )}
-          <PicksChips
-            world="videojuegos"
-            selectedCategories={v.categories}
-            value={v.picks ?? []}
-            onChange={(next) => updateWorld('videojuegos', { picks: next })}
-            label="¿Cuáles de estos juegas o te marcaron?"
-          />
-          <Field label="(OPCIONAL) Otros juegos favoritos">
-            <textarea
-              className="input min-h-[60px]"
-              placeholder="ej. Zelda, o League of Legends"
-              value={v.favorites}
-              onChange={(e) =>
-                updateWorld('videojuegos', { favorites: e.target.value })
-              }
-            />
-          </Field>
-        </div>
-      </>
-    );
-  }
-  return null;
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={() => onSwipe('pass')}
+          className="rounded-full border-2 border-ink/15 bg-transparent py-4 text-base font-bold text-ink/55 transition-all active:scale-95 hover:border-ink/30"
+        >
+          ✕ pasar
+        </button>
+        <button
+          type="button"
+          onClick={() => onSwipe('love')}
+          className="rounded-full bg-coral py-4 text-base font-bold text-white shadow-[0_5px_0_rgba(91,45,130,0.18)] transition-all active:scale-95"
+        >
+          ♥ me encanta
+        </button>
+      </div>
+    </div>
+  );
 }
 
-const PLAN_DAYS_OPTS = [
-  { id: 'si_ambos',       label: 'Sí, ambos' },
-  { id: 'solo_martes',    label: 'Solo martes' },
-  { id: 'solo_miercoles', label: 'Solo miércoles' },
-  { id: 'otro_dia',       label: 'Otro día' },
-];
-
-const OTHER_DAYS = ['Lunes', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-
-function ClosingStep({
+// ── ✨ Otro card ──
+function OtroCardStep({
+  section,
   q,
-  update,
+  upsert,
 }: {
-  q: QuizResponses;
-  update: <K extends keyof QuizResponses>(k: K, v: QuizResponses[K]) => void;
+  section: WorldSection;
+  q: Draft;
+  upsert: (w: SwipeWorldId, category: string, patch: Partial<TasteRecord>) => void;
 }) {
-  const diningOpts: { id: DiningStyle; label: string }[] = [
-    { id: 'hablar', label: 'Hablar bastante' },
-    { id: 'escuchar', label: 'Escuchar más' },
-  ];
-  const dietOpts: { id: Dietary; label: string }[] = [
-    { id: 'ninguna', label: 'Ninguna' },
-    { id: 'vegetariano', label: 'Vegetariano' },
-    { id: 'vegano', label: 'Vegano' },
-    { id: 'alergia', label: 'Alergias' },
-  ];
-  const expOpts: { id: ExpPreference; label: string }[] = [
-    { id: 'solo_amigos', label: 'ir solo' },
-    { id: 'plus_one',    label: 'llevar un +1' },
-    { id: 'cualquiera',  label: 'cualquiera' },
-  ];
+  const rec = (q.taste[section.id] ?? []).find((r) => r.category === OTRO_CARD);
+  const [text, setText] = useState(rec?.otro ?? '');
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <SlideLabel>
+        {section.emoji} {section.label}
+      </SlideLabel>
+      <h1 className="text-4xl font-black tracking-tight leading-none mt-2 mb-7">nos faltó alguno?</h1>
+      <input
+        className="input-ghost"
+        value={text}
+        autoFocus
+        onChange={(e) => {
+          setText(e.target.value);
+          upsert(section.id, OTRO_CARD, { reaction: 'love', otro: e.target.value });
+        }}
+      />
+    </div>
+  );
+}
+
+// ── Editorial selection row (no box — divider list, coral dot when on) ──
+function OptionList({ options, value, onToggle }: { options: SubOption[]; value: string[]; onToggle: (n: string) => void }) {
+  return (
+    <div className="divide-y divide-ink/8 border-t border-b border-ink/8">
+      {options.map((o) => {
+        const active = value.includes(o.name);
+        return (
+          <button key={o.name} type="button" onClick={() => onToggle(o.name)} className="w-full text-left py-3 flex items-start gap-3 active:scale-[0.99] transition-transform">
+            <span className={`mt-0.5 w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${active ? 'bg-coral text-white' : 'border-2 border-ink/20 text-transparent'}`}>
+              ✓
+            </span>
+            <span className="min-w-0">
+              <span className={`block text-lg font-bold leading-tight ${active ? 'text-coral' : 'text-ink'}`}>{o.name}</span>
+              {o.examples && <span className="block text-sm text-ink/40 leading-tight truncate">{o.examples}</span>}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Layer 2 — ONE page: sub-options (with examples) + "nos faltaron" field ──
+function DetailStep({
+  ci,
+  section,
+  q,
+  upsert,
+}: {
+  ci: number;
+  section: WorldSection;
+  q: Draft;
+  upsert: (w: SwipeWorldId, category: string, patch: Partial<TasteRecord>) => void;
+}) {
+  const recs = q.taste[section.id] ?? [];
+  const card = section.cards[ci];
+  const rec = recs.find((r) => r.category === card.name);
+
+  let field: 'sub' | 'platform' = 'sub';
+  let options: SubOption[] = [];
+  if (section.id === 'musica' && card.subGenres) options = card.subGenres;
+  else if (card.subAxis) options = card.subAxis;
+  else if (card.platform) {
+    options = PLATFORM_OPTIONS;
+    field = 'platform';
+  }
+  const value = rec?.[field] ?? [];
+  const toggle = (n: string) => {
+    const cur = rec?.[field] ?? [];
+    upsert(section.id, card.name, { [field]: cur.includes(n) ? cur.filter((x) => x !== n) : [...cur, n] });
+  };
+
+  const [typedText, setTypedText] = useState((rec?.typed ?? []).join(', '));
 
   return (
-    <>
-      <StepTitle title="Lo último" />
+    <div className="flex-1 min-h-0 flex flex-col">
+      <SlideLabel>
+        {section.emoji} {section.label}
+      </SlideLabel>
+      <h1 className="text-4xl font-black tracking-tight leading-none mt-2 mb-5 shrink-0">
+        {card.emoji ? `${card.emoji} ` : ''}
+        {card.name}
+      </h1>
+      {options.length > 0 && <OptionList options={options} value={value} onToggle={toggle} />}
+      <div className="mt-6">
+        <span className="block text-xs uppercase tracking-wider font-semibold text-ink/45 mb-1">{section.typedLabel}</span>
+        <input
+          className="input-ghost"
+          placeholder={section.typedPlaceholder}
+          value={typedText}
+          onChange={(e) => {
+            setTypedText(e.target.value);
+            upsert(section.id, card.name, { typed: parseTyped(e.target.value) });
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
-      <Field label="eres de">
-        <div className="flex flex-wrap gap-2">
-          {diningOpts.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => update('diningStyle', o.id)}
-              className={`chip ${
-                q.diningStyle === o.id ? 'chip-active' : 'chip-idle'
-              }`}
-            >
+// ── Deportes ──
+function DeportesStep({ q, setQ }: { q: Draft; setQ: React.Dispatch<React.SetStateAction<Draft>> }) {
+  const rel = q.taste.deportes?.relation ?? [];
+  const typed = q.taste.deportes?.typed ?? [];
+  const [typedText, setTypedText] = useState(typed.join(', '));
+  const setDep = (patch: Partial<NonNullable<Draft['taste']['deportes']>>) =>
+    setQ((p) => ({ ...p, taste: { ...p.taste, deportes: { relation: rel, typed, ...p.taste.deportes, ...patch } } }));
+  const toggleRel = (r: 'practico' | 'veo') => setDep({ relation: rel.includes(r) ? rel.filter((x) => x !== r) : [...rel, r] });
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <h1 className="text-4xl font-black tracking-tight leading-none mb-6 shrink-0">🏆 deportes</h1>
+      <div className="space-y-6">
+        <div>
+          <span className="block text-xs uppercase tracking-wider font-semibold text-ink/45 mb-2">¿eres de?</span>
+          <div className="flex flex-wrap gap-2">
+            {([['practico', 'lo practico'], ['veo', 'lo veo']] as const).map(([id, label]) => (
+              <button key={id} type="button" onClick={() => toggleRel(id)} className={`chip ${rel.includes(id) ? 'chip-active' : 'chip-idle'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <GhostField label="¿cuál?" value={typedText} placeholder="fútbol, NBA…" onChange={(v) => { setTypedText(v); setDep({ typed: parseTyped(v) }); }} />
+      </div>
+    </div>
+  );
+}
+
+// ── Lo último ──
+function LogisticsStep({ q, setQ }: { q: Draft; setQ: React.Dispatch<React.SetStateAction<Draft>> }) {
+  const L = q.logistics;
+  const setL = (patch: Partial<Draft['logistics']>) => setQ((p) => ({ ...p, logistics: { ...p.logistics, ...patch } }));
+  const toggleDieta = (id: 'ninguna' | 'vegetariano' | 'vegano' | 'alergias') =>
+    setL({ dieta: L.dieta.includes(id) ? L.dieta.filter((d) => d !== id) : [...L.dieta, id] });
+  const Q = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <span className="block text-xs uppercase tracking-wider font-semibold text-ink/45 mb-2">{label}</span>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <h1 className="text-4xl font-black tracking-tight leading-none mb-6 shrink-0">lo último</h1>
+      <div className="space-y-5">
+        <Q label="eres de">
+          {(['hablar', 'escuchar'] as const).map((r) => (
+            <button key={r} type="button" onClick={() => setL({ rol: r })} className={`chip ${L.rol === r ? 'chip-active' : 'chip-idle'}`}>
+              {r}
+            </button>
+          ))}
+        </Q>
+        <Q label="si te invitamos un plan, vas">
+          {([['solo', false], ['con un +1', true]] as const).map(([label, val]) => (
+            <button key={label} type="button" onClick={() => setL({ plus_one: val })} className={`chip ${L.plus_one === val ? 'chip-active' : 'chip-idle'}`}>
+              {label}
+            </button>
+          ))}
+        </Q>
+        <Q label="¿qué noches sales?">
+          {DISPONIBILIDAD.map((o) => (
+            <button key={o.id} type="button" onClick={() => setL({ disponibilidad: o.id })} className={`chip ${L.disponibilidad === o.id ? 'chip-active' : 'chip-idle'}`}>
               {o.label}
             </button>
           ))}
-        </div>
-      </Field>
-
-      <div className="mt-6">
-        <Field label="restricción alimentaria">
-          <div className="flex flex-wrap gap-2">
-            {dietOpts.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => update('dietary', o.id)}
-                className={`chip ${
-                  q.dietary === o.id ? 'chip-active' : 'chip-idle'
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          {q.dietary === 'alergia' && (
-            <input
-              className="input mt-3"
-              placeholder="¿Qué alergia? Escríbela."
-              value={q.dietaryNote || ''}
-              onChange={(e) => update('dietaryNote', e.target.value)}
-            />
-          )}
-        </Field>
-      </div>
-
-      <div className="mt-6">
-        <Field label="para el plan, prefieres">
-          <div className="flex flex-wrap gap-2">
-            {expOpts.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => update('expPreference', o.id)}
-                className={`chip ${
-                  q.expPreference === o.id ? 'chip-active' : 'chip-idle'
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </Field>
-      </div>
-
-      <div className="mt-6">
-        <Field label="En general, ¿llegas a ir a un plan un martes o miércoles por la noche?">
-          <div className="flex flex-wrap gap-2">
-            {PLAN_DAYS_OPTS.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => update('planDays', o.id)}
-                className={`chip ${
-                  q.planDays === o.id ? 'chip-active' : 'chip-idle'
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </Field>
-        {q.planDays === 'otro_dia' && (
-          <div className="mt-4 animate-step-in">
-            <Field label="¿Qué días?">
-              <div className="flex flex-wrap gap-2">
-                {OTHER_DAYS.map((day) => {
-                  const active = (q.planDaysOther || []).includes(day);
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => {
-                        const current = q.planDaysOther || [];
-                        update('planDaysOther', active
-                          ? current.filter((d) => d !== day)
-                          : [...current, day]
-                        );
-                      }}
-                      className={`chip ${active ? 'chip-active' : 'chip-idle'}`}
-                    >
-                      {day}
-                    </button>
-                  );
-                })}
-              </div>
-            </Field>
-          </div>
+        </Q>
+        <Q label="restricción alimentaria">
+          {DIETAS.map((d) => (
+            <button key={d.id} type="button" onClick={() => toggleDieta(d.id)} className={`chip ${L.dieta.includes(d.id) ? 'chip-active' : 'chip-idle'}`}>
+              {d.label}
+            </button>
+          ))}
+        </Q>
+        {L.dieta.includes('alergias') && (
+          <input className="input-ghost" placeholder="¿cuál?" value={L.dieta_note ?? ''} onChange={(e) => setL({ dieta_note: e.target.value })} />
         )}
       </div>
-    </>
+    </div>
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+// ── Completion placeholder ──
+function DoneScreen() {
   return (
-    <label className="block">
-      <span className="block text-sm font-medium text-ink/80 mb-2">
-        {label}
-      </span>
-      {children}
-    </label>
+    <div className="relative h-[100svh] flex flex-col items-center justify-center bg-cream gap-6 px-6 overflow-hidden">
+      <Confetti density="dense" />
+      <div className="relative z-10 flex flex-col items-center gap-4 text-center">
+        <Logo width={150} priority />
+        <h1 className="text-3xl font-black tracking-tight">listo, ya estás en Sero 🎴</h1>
+      </div>
+    </div>
   );
 }

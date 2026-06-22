@@ -26,49 +26,44 @@ const FRIENDSHIPS_SHEET_NAME = 'friendships';
 const FRIENDSHIP_COLUMNS = ['timestamp', 'fromSlug', 'fromName', 'toSlug', 'toName', 'mutualFriend', 'commonCount'];
 
 // Column order MUST match the live `responses` sheet exactly — doPost appends
-// rows positionally and the export reads by COLUMNS.indexOf(...). 42 columns.
+// rows positionally and the export reads by COLUMNS.indexOf(...).
+//
+// NEW swipe-stories schema. Per-world `taste.*` blocks are arrays of records
+// ({category, reaction, sub, eras, platform, typed, plan_able}); they're stored
+// as JSON in their column for human reference. The full payload also lives in
+// `rawJson`, which the matching export re-parses — so rawJson is the source of
+// truth and these flattened columns are just for eyeballing the sheet.
+//
+// IMPORTANT after deploying this file: create a NEW deployment, and clear row 1
+// of the `responses` sheet so the new headers are recreated.
 const COLUMNS = [
-  'timestamp', 'slug', 'referredBy',
-  'firstName', 'lastName', 'city', 'age', 'whatsapp',
-  'selectedWorlds', 'otrosMundos',
-  // Música
-  'musica.categories', 'musica.picks', 'musica.eras', 'musica.topArtists',
-  // Series
-  'series.categories', 'series.picks', 'series.seriesOtro', 'series.region', 'series.netflixPick',
-  // Películas
-  'peliculas.categories', 'peliculas.picks', 'peliculas.tipo', 'peliculas.favorites',
-  // Anime
-  'anime.categories', 'anime.picks', 'anime.preference', 'anime.favorites', 'anime.current',
-  // Libros
-  'libros.categories', 'libros.picks', 'libros.topBooks', 'libros.recent',
-  // Deportes
-  'deportes.selected', 'deportes.otros',
-  // Videojuegos
-  'videojuegos.categories', 'videojuegos.picks', 'videojuegos.favorites',
-  // Cierre
-  'diningStyle', 'dietary', 'dietaryNote', 'expPreference',
+  'timestamp', 'slug', 'referred_by',
+  'name', 'apellido', 'ciudad', 'edad', 'whatsapp',
+  'worlds',
+  // Per-world taste (JSON)
+  'taste.musica', 'taste.peliculas', 'taste.series', 'taste.anime',
+  'taste.libros', 'taste.videojuegos', 'taste.deportes', 'taste.otro',
+  // Lo último
+  'logistics.rol', 'logistics.plus_one', 'logistics.disponibilidad', 'logistics.dieta', 'logistics.dieta_note',
+  'created_at',
   'rawJson',
 ];
 
-// Fields that arrive as arrays — joined with ", " for human reading in the sheet.
-const ARRAY_FIELDS = {
-  'selectedWorlds':       true,
-  'musica.categories':    true,
-  'musica.picks':         true,
-  'musica.eras':          true,
-  'series.categories':    true,
-  'series.picks':         true,
-  'series.region':        true,
-  'peliculas.categories': true,
-  'peliculas.picks':      true,
-  'peliculas.tipo':       true,
-  'anime.categories':     true,
-  'anime.picks':          true,
-  'libros.categories':    true,
-  'libros.picks':         true,
-  'videojuegos.categories': true,
-  'videojuegos.picks':    true,
-  'deportes.selected':    true,
+// Fields joined with ", " for human reading in the sheet.
+const JOIN_FIELDS = {
+  'worlds':          true,
+  'logistics.dieta': true,
+};
+
+// Per-world taste blocks — stored as JSON (taste.otro is plain text, excluded).
+const JSON_FIELDS = {
+  'taste.musica':      true,
+  'taste.peliculas':   true,
+  'taste.series':      true,
+  'taste.anime':       true,
+  'taste.libros':      true,
+  'taste.videojuegos': true,
+  'taste.deportes':    true,
 };
 
 function getSpreadsheet_() {
@@ -137,10 +132,10 @@ function findMatches_(sh, newSlug, referredBy, newWorldsArr) {
   if (lastRow < 2) return [];
 
   const slugIdx       = COLUMNS.indexOf('slug');
-  const firstNameIdx  = COLUMNS.indexOf('firstName');
-  const lastNameIdx   = COLUMNS.indexOf('lastName');
-  const referredByIdx = COLUMNS.indexOf('referredBy');
-  const worldsIdx     = COLUMNS.indexOf('selectedWorlds');
+  const firstNameIdx  = COLUMNS.indexOf('name');
+  const lastNameIdx   = COLUMNS.indexOf('apellido');
+  const referredByIdx = COLUMNS.indexOf('referred_by');
+  const worldsIdx     = COLUMNS.indexOf('worlds');
 
   const data = sh.getRange(2, 1, lastRow - 1, COLUMNS.length).getValues();
   const newWorldsSet = new Set(newWorldsArr || []);
@@ -208,8 +203,8 @@ function confirmFriend_(body) {
     var lastRow = rsh.getLastRow();
     if (lastRow >= 2) {
       var slugIdx   = COLUMNS.indexOf('slug');
-      var fnIdx     = COLUMNS.indexOf('firstName');
-      var lnIdx     = COLUMNS.indexOf('lastName');
+      var fnIdx     = COLUMNS.indexOf('name');
+      var lnIdx     = COLUMNS.indexOf('apellido');
       var data      = rsh.getRange(2, 1, lastRow - 1, COLUMNS.length).getValues();
       for (var i = 0; i < data.length; i++) {
         if (String(data[i][slugIdx] || '').trim() === body.fromSlug) {
@@ -276,7 +271,9 @@ function doPost(e) {
       } else {
         val = payload[col];
       }
-      if (ARRAY_FIELDS[col]) return (val || []).join(', ');
+      if (JSON_FIELDS[col])    return val != null ? JSON.stringify(val) : '';
+      if (JOIN_FIELDS[col])    return (val || []).join(', ');
+      if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
       return val != null ? val : '';
     });
 
@@ -316,9 +313,9 @@ function exportData_() {
   var last = sh.getLastRow();
   if (last >= 2) {
     var slugIdx = COLUMNS.indexOf('slug');
-    var fnIdx   = COLUMNS.indexOf('firstName');
-    var lnIdx   = COLUMNS.indexOf('lastName');
-    var refIdx  = COLUMNS.indexOf('referredBy');
+    var fnIdx   = COLUMNS.indexOf('name');
+    var lnIdx   = COLUMNS.indexOf('apellido');
+    var refIdx  = COLUMNS.indexOf('referred_by');
     var rawIdx  = COLUMNS.indexOf('rawJson');
     var data = sh.getRange(2, 1, last - 1, COLUMNS.length).getValues();
     for (var i = 0; i < data.length; i++) {

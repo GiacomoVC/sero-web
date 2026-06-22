@@ -1,4 +1,4 @@
-import type { QuizResponses } from '@/lib/types';
+import type { QuizSchema } from '@/lib/types';
 import type { ExportData, ExportRow } from './types';
 
 /**
@@ -12,7 +12,7 @@ function mk(
   slug: string,
   first: string,
   referredBy: string | undefined,
-  taste: Partial<QuizResponses>
+  taste: QuizSchema['taste'],
 ): ExportRow {
   return {
     slug,
@@ -20,64 +20,40 @@ function mk(
     lastName: '',
     referredBy,
     payload: {
-      firstName: first,
-      lastName: '',
-      city: 'Lima',
-      age: '20',
+      name: first,
+      apellido: '',
+      ciudad: 'Lima',
+      edad: '20',
       whatsapp: '',
-      selectedWorlds: [],
-      diningStyle: 'depende',
-      dietary: 'ninguna',
-      expPreference: 'cualquiera',
-      ...taste,
-    } as QuizResponses,
+      referred_by: referredBy,
+      worlds: [],
+      taste,
+      logistics: { rol: 'hablar', plus_one: false, disponibilidad: 'cualquiera', dieta: ['ninguna'] },
+    },
   };
 }
 
-const pop = { categories: ['Pop'] };
-const onePiece = { categories: [], picks: ['One Piece'] };
+const pop: QuizSchema['taste'] = { musica: [{ category: 'Pop', reaction: 'love' }] };
+const onePiece: QuizSchema['taste'] = {
+  anime: [{ category: 'Shonen / acción', reaction: 'love', typed: ['One Piece'] }],
+};
+const drama: QuizSchema['taste'] = { series: [{ category: 'Drama prestigio', reaction: 'love' }] };
+const fantasy: QuizSchema['taste'] = { libros: [{ category: 'Fantasía / sci-fi', reaction: 'love' }] };
+const shooter: QuizSchema['taste'] = {
+  videojuegos: [{ category: 'Shooters / battle royale', reaction: 'love', plan_able: true }],
+};
 
 export const DEMO_DATA: ExportData = {
   responses: [
-    mk('bruno', 'Bruno', undefined, { musica: { categories: ['Pop'], eras: [], topArtists: '' } }),
-    mk('ana', 'Ana', 'bruno', {
-      musica: { ...pop, eras: [], topArtists: '' },
-      series: { categories: ['Drama'], region: [], picks: [] },
-      anime: { ...onePiece, preference: 'anime', favorites: '', current: '' },
-      libros: { categories: ['Fantasía'], picks: [], topBooks: '', recent: '' },
-    }),
-    mk('carla', 'Carla', 'bruno', {
-      musica: { ...pop, eras: [], topArtists: '' },
-      videojuegos: { categories: ['Shooter'], picks: [], favorites: '' },
-    }),
-    mk('diego', 'Diego', 'bruno', {
-      series: { categories: ['Drama'], region: [], picks: [] },
-      libros: { categories: ['Fantasía'], picks: [], topBooks: '', recent: '' },
-    }),
-    mk('elena', 'Elena', 'bruno', {
-      musica: { ...pop, eras: [], topArtists: '' },
-      anime: { ...onePiece, preference: 'anime', favorites: '', current: '' },
-      videojuegos: { categories: ['Shooter'], picks: [], favorites: '' },
-    }),
-    mk('fabio', 'Fabio', 'ana', {
-      musica: { ...pop, eras: [], topArtists: '' },
-      series: { categories: ['Drama'], region: [], picks: [] },
-      anime: { ...onePiece, preference: 'anime', favorites: '', current: '' },
-    }),
-    mk('gabriela', 'Gabriela', 'fabio', {
-      musica: { ...pop, eras: [], topArtists: '' },
-      anime: { ...onePiece, preference: 'anime', favorites: '', current: '' },
-      libros: { categories: ['Fantasía'], picks: [], topBooks: '', recent: '' },
-    }),
-    mk('hugo', 'Hugo', 'fabio', {
-      series: { categories: ['Drama'], region: [], picks: [] },
-      videojuegos: { categories: ['Shooter'], picks: [], favorites: '' },
-    }),
-    mk('ines', 'Ines', 'fabio', {
-      series: { categories: ['Drama'], region: [], picks: [] },
-      libros: { categories: ['Fantasía'], picks: [], topBooks: '', recent: '' },
-      videojuegos: { categories: ['Shooter'], picks: [], favorites: '' },
-    }),
+    mk('bruno', 'Bruno', undefined, { ...pop }),
+    mk('ana', 'Ana', 'bruno', { ...pop, ...drama, ...onePiece, ...fantasy }),
+    mk('carla', 'Carla', 'bruno', { ...pop, ...shooter }),
+    mk('diego', 'Diego', 'bruno', { ...drama, ...fantasy }),
+    mk('elena', 'Elena', 'bruno', { ...pop, ...onePiece, ...shooter }),
+    mk('fabio', 'Fabio', 'ana', { ...pop, ...drama, ...onePiece }),
+    mk('gabriela', 'Gabriela', 'fabio', { ...pop, ...onePiece, ...fantasy }),
+    mk('hugo', 'Hugo', 'fabio', { ...drama, ...shooter }),
+    mk('ines', 'Ines', 'fabio', { ...drama, ...fantasy, ...shooter }),
   ],
   friendships: [],
 };
