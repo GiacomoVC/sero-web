@@ -12,6 +12,28 @@ export const WORLDS: { id: WorldId; label: string; emoji: string }[] = [
   { id: 'otro', label: 'otro', emoji: '❤️' },
 ];
 
+// ─── Obsesiones dropdown ────────────────────────────────────────────────────
+// Broader than the 8 worlds (adds gastronomía + viajes). The single source for
+// the category→world map: gastronomía/viajes/otro have no own world, so they
+// persist under world='otro' with the human label kept in obsesiones.category.
+// SCHEMA.md: "never hardcode the set elsewhere" — derive the world from here.
+export const OBSESION_CATEGORIES: { label: string; emoji: string; world: WorldId }[] = [
+  { label: 'música', emoji: '🎵', world: 'musica' },
+  { label: 'series', emoji: '📺', world: 'series' },
+  { label: 'películas', emoji: '🎬', world: 'peliculas' },
+  { label: 'anime', emoji: '🀄', world: 'anime' },
+  { label: 'libros', emoji: '📚', world: 'libros' },
+  { label: 'videojuegos', emoji: '🕹️', world: 'videojuegos' },
+  { label: 'deportes', emoji: '🏆', world: 'deportes' },
+  { label: 'gastronomía', emoji: '🍝', world: 'otro' },
+  { label: 'viajes', emoji: '✈️', world: 'otro' },
+  { label: 'otro', emoji: '✨', world: 'otro' },
+];
+
+/** Map an obsesión category label → its seeded world id (falls back to 'otro'). */
+export const worldForCategory = (label: string): WorldId =>
+  OBSESION_CATEGORIES.find((c) => c.label === label)?.world ?? 'otro';
+
 export type SwipeWorldId = Exclude<WorldId, 'deportes' | 'otro'>;
 export const SECTION_ORDER: SwipeWorldId[] = [
   'musica',

@@ -3,6 +3,10 @@ import { toSlug } from '@/lib/slug';
 import { extractTags } from '@/lib/extractTags';
 import { buildWhatsAppMessage } from '@/lib/whatsapp';
 import { getBaseUrl } from '@/lib/baseUrl';
+import { supabaseConfigured } from '@/lib/supabase/admin';
+import { createUserFromQuiz } from '@/lib/db/users';
+import { findMatches, type Match } from '@/lib/db/matches';
+import { logEvent } from '@/lib/logEvent';
 import type { QuizResponses, SubmitResult } from '@/lib/types';
 
 function jsonUtf8(data: unknown, init?: ResponseInit) {
@@ -19,40 +23,30 @@ function jsonUtf8(data: unknown, init?: ResponseInit) {
 
 export const runtime = 'nodejs';
 
-function pickLoveExample(q: QuizResponses): string | undefined {
-  const tags = extractTags(q, 1);
-  return tags[0];
-}
-
-type AppsScriptResponse = {
-  slug: string;
-  matches?: Array<{ slug: string; name: string; commonCount: number; mutualFriend?: string }>;
-};
-
-async function reserveSlugViaAppsScript(
+/**
+ * Persist the submission to Supabase and compute friend-match suggestions.
+ * Returns the resolved handle (collision-counted) + matches, the exact shape
+ * ShareScreen consumes. When Supabase is not configured (e.g. local dev with no
+ * env), it degrades to a logged no-op so the quiz UX still completes.
+ */
+async function persistAndMatch(
   desiredSlug: string,
-  payload: QuizResponses
-): Promise<AppsScriptResponse> {
-  const url = process.env.APPS_SCRIPT_URL;
-  if (!url) {
-    console.log('[sero] (no APPS_SCRIPT_URL) would save:', { slug: desiredSlug, payload });
+  q: QuizResponses
+): Promise<{ slug: string; matches: Match[] }> {
+  if (!supabaseConfigured()) {
+    console.log('[sero] (no Supabase env) would save:', { slug: desiredSlug });
     return { slug: desiredSlug, matches: [] };
   }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      secret: process.env.WEBHOOK_SECRET || '',
-      desiredSlug,
-      payload,
-    }),
+  const { handle } = await createUserFromQuiz(q);
+  const matches = await findMatches(handle, q.referred_by ?? '', q.worlds ?? []);
+  // Instrumentation skeleton in action — one canonical surface event.
+  await logEvent('quiz_submitted', {
+    handle,
+    source_ref: q.referred_by,
+    worlds: q.worlds ?? [],
+    match_count: matches.length,
   });
-  if (!res.ok) {
-    throw new Error(`Apps Script error: ${res.status}`);
-  }
-  const data = (await res.json()) as AppsScriptResponse;
-  if (!data?.slug) throw new Error('Apps Script returned no slug');
-  return { slug: data.slug, matches: data.matches || [] };
+  return { slug: handle, matches };
 }
 
 export async function POST(req: Request) {
@@ -71,9 +65,9 @@ export async function POST(req: Request) {
   }
 
   const desiredSlug = toSlug(q.name, q.apellido);
-  let scriptResponse: AppsScriptResponse;
+  let result: { slug: string; matches: Match[] };
   try {
-    scriptResponse = await reserveSlugViaAppsScript(desiredSlug, q);
+    result = await persistAndMatch(desiredSlug, q);
   } catch (e) {
     console.error('[sero] submit failed:', e);
     return jsonUtf8(
@@ -82,7 +76,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { slug, matches } = scriptResponse;
+  const { slug, matches } = result;
   const base = getBaseUrl(req);
   const url = `${base}/${slug}`;
   const tags = extractTags(q, 6);
@@ -95,7 +89,7 @@ export async function POST(req: Request) {
     tags,
   });
 
-  const result: SubmitResult = {
+  const submitResult: SubmitResult = {
     slug,
     url,
     igUrl,
@@ -103,5 +97,5 @@ export async function POST(req: Request) {
     tags,
     matches,
   };
-  return jsonUtf8(result);
+  return jsonUtf8(submitResult);
 }

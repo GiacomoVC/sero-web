@@ -71,6 +71,14 @@ export interface QuizSchema {
     otro?: string;
   };
 
+  /**
+   * Obsessions captured early (right after Lo básico) — the living, shareable
+   * signals. Each row: a specific item + optional link, tagged to a seeded
+   * `world` (gastronomía/viajes have no world → stored under `world='otro'`,
+   * with the human label kept in `category`). Empty rows are dropped on submit.
+   */
+  obsesiones?: { world: string; category?: string; item_text: string; link?: string }[];
+
   // ── Lo último ──
   logistics: {
     rol: 'hablar' | 'escuchar';

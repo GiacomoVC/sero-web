@@ -7,6 +7,8 @@ import { ProgressBar } from './ProgressBar';
 import { Confetti } from '../ui/Confetti';
 import {
   WORLDS,
+  OBSESION_CATEGORIES,
+  worldForCategory,
   SECTION_ORDER,
   SECTIONS,
   PLATFORM_OPTIONS,
@@ -33,8 +35,17 @@ type Draft = Omit<QuizSchema, 'logistics'> & {
   };
 };
 
+// Obsesiones defaults: categories pre-selected (varied, to teach range), fields
+// empty — the example copy lives only in the ghosted placeholders below.
+function emptyObsesiones(): NonNullable<Draft['obsesiones']> {
+  return [
+    { world: 'otro', category: 'gastronomía', item_text: '', link: '' },
+    { world: 'musica', category: 'música', item_text: '', link: '' },
+    { world: 'videojuegos', category: 'videojuegos', item_text: '', link: '' },
+  ];
+}
 function emptyDraft(): Draft {
-  return { name: '', apellido: '', ciudad: '', edad: '', whatsapp: '', worlds: [], taste: {}, logistics: { dieta: [] } };
+  return { name: '', apellido: '', ciudad: '', edad: '', whatsapp: '', worlds: [], taste: {}, obsesiones: emptyObsesiones(), logistics: { dieta: [] } };
 }
 
 // ─── Flow phases ────────────────────────────────────────────────────────────
@@ -44,6 +55,7 @@ function emptyDraft(): Draft {
 // field together. `detail.ci` is the swipe-deck index of the just-loved card.
 type Phase =
   | { kind: 'personal' }
+  | { kind: 'obsesiones' }
   | { kind: 'worlds' }
   | { kind: 'swipe'; wi: number; ci: number }
   | { kind: 'otroCard'; wi: number }
@@ -51,7 +63,7 @@ type Phase =
   | { kind: 'deportes' }
   | { kind: 'logistics' };
 
-const STORAGE_KEY = 'sero_quiz_v5';
+const STORAGE_KEY = 'sero_quiz_v6';
 type Saved = { q: Draft; phase: Phase };
 
 function loadSaved(): Saved | null {
@@ -178,6 +190,9 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
     if (!canAdvance()) return;
     switch (phase.kind) {
       case 'personal':
+        setPhase({ kind: 'obsesiones' });
+        return;
+      case 'obsesiones':
         setPhase({ kind: 'worlds' });
         return;
       case 'worlds':
@@ -208,8 +223,11 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       case 'personal':
         router.push('/');
         return;
-      case 'worlds':
+      case 'obsesiones':
         setPhase({ kind: 'personal' });
+        return;
+      case 'worlds':
+        setPhase({ kind: 'obsesiones' });
         return;
       case 'swipe': {
         const { wi, ci } = phase;
@@ -248,6 +266,9 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
     switch (phase.kind) {
       case 'personal':
         return [q.name, q.apellido, q.ciudad, q.edad, q.whatsapp].every((v) => v.trim() !== '');
+      case 'obsesiones':
+        // Encourage 3, allow blanks — but secure at least one before the long quiz.
+        return (q.obsesiones ?? []).some((o) => o.item_text.trim() !== '');
       case 'worlds':
         if (q.worlds.length === 0) return false;
         if (otroSelected && !q.taste.otro?.trim()) return false;
@@ -270,6 +291,14 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       const payload: QuizSchema = {
         ...q,
         taste: pruneTaste(q.taste),
+        obsesiones: (q.obsesiones ?? [])
+          .map((o) => ({
+            world: o.world,
+            category: o.category,
+            item_text: o.item_text.trim(),
+            link: o.link?.trim() || undefined,
+          }))
+          .filter((o) => o.item_text !== ''),
         logistics: {
           rol: q.logistics.rol!,
           plus_one: q.logistics.plus_one!,
@@ -296,27 +325,30 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
     }
   };
 
-  const macroTotal = 2 + activeSections.length + (deportesSelected ? 1 : 0) + 1;
+  // Macro slots: personal · obsesiones · worlds · [swipe sections…] · [deportes?] · logistics
+  const macroTotal = 3 + activeSections.length + (deportesSelected ? 1 : 0) + 1;
   const macroIndex = (): number => {
     switch (phase.kind) {
       case 'personal':
         return 0;
-      case 'worlds':
+      case 'obsesiones':
         return 1;
+      case 'worlds':
+        return 2;
       case 'swipe': {
         const len = activeSections[phase.wi].cards.length;
-        return 2 + phase.wi + (phase.ci / (len + 1)) * 0.85;
+        return 3 + phase.wi + (phase.ci / (len + 1)) * 0.85;
       }
       case 'detail': {
         const len = activeSections[phase.wi].cards.length;
-        return 2 + phase.wi + ((phase.ci + 0.5) / (len + 1)) * 0.85;
+        return 3 + phase.wi + ((phase.ci + 0.5) / (len + 1)) * 0.85;
       }
       case 'otroCard':
-        return 2 + phase.wi + 0.9;
+        return 3 + phase.wi + 0.9;
       case 'deportes':
-        return 2 + activeSections.length;
+        return 3 + activeSections.length;
       case 'logistics':
-        return 2 + activeSections.length + (deportesSelected ? 1 : 0);
+        return 3 + activeSections.length + (deportesSelected ? 1 : 0);
     }
   };
   const progress = Math.min(0.98, Math.max(0.03, macroIndex() / macroTotal));
@@ -335,6 +367,7 @@ export function Quiz({ referredBy }: { referredBy?: string }) {
       <main className="relative z-10 flex-1 min-h-0 px-6 py-5 max-w-md w-full mx-auto overflow-hidden flex flex-col">
         <div key={phaseKey(phase)} className="animate-step-in flex-1 min-h-0 flex flex-col">
           {phase.kind === 'personal' && <PersonalStep q={q} setQ={setQ} />}
+          {phase.kind === 'obsesiones' && <ObsesionesStep q={q} setQ={setQ} />}
           {phase.kind === 'worlds' && <WorldsStep q={q} setQ={setQ} />}
           {phase.kind === 'swipe' && <SwipeStep section={activeSections[phase.wi]} ci={phase.ci} onSwipe={onSwipe} />}
           {phase.kind === 'otroCard' && <OtroCardStep section={activeSections[phase.wi]} q={q} upsert={upsert} />}
@@ -436,6 +469,69 @@ function PersonalStep({ q, setQ }: { q: Draft; setQ: React.Dispatch<React.SetSta
         <GhostField label="ciudad" value={q.ciudad} onChange={(v) => set('ciudad', v)} placeholder="Lima" />
         <GhostField label="edad" value={q.edad} onChange={(v) => set('edad', v.replace(/[^0-9]/g, ''))} placeholder="24" inputMode="numeric" />
         <GhostField label="WhatsApp" value={q.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="999 111 222" inputMode="tel" />
+      </div>
+    </div>
+  );
+}
+
+// ── Page 1.5 — Obsesiones (the living, shareable signals; captured early) ──
+// Example copy lives ONLY in the ghosted placeholders — fields start empty.
+const OBSESION_PLACEHOLDERS = [
+  'descubrí y amé el tiramisú',
+  'escuchando Let It Happen on repeat',
+  'en racha de victorias de FIFA',
+];
+const OBSESION_LINK_PLACEHOLDER = 'pega el link (Spotify, YouTube…)';
+
+function ObsesionesStep({ q, setQ }: { q: Draft; setQ: React.Dispatch<React.SetStateAction<Draft>> }) {
+  const rows = q.obsesiones ?? emptyObsesiones();
+  const setRow = (i: number, patch: Partial<NonNullable<Draft['obsesiones']>[number]>) =>
+    setQ((p) => {
+      const next = [...(p.obsesiones ?? emptyObsesiones())];
+      next[i] = { ...next[i], ...patch };
+      return { ...p, obsesiones: next };
+    });
+  // Category drives the persisted world (gastronomía/viajes/otro → world 'otro').
+  const onCategory = (i: number, label: string) => setRow(i, { category: label, world: worldForCategory(label) });
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <h1 className="text-[1.6rem] font-black tracking-tight leading-[1.08] mb-2 shrink-0">comparte tus 3 obsesiones más recientes</h1>
+      <p className="text-sm text-ink/45 leading-snug mb-4 shrink-0">Esto cambia. Vas a poder actualizarlas cuando quieras.</p>
+
+      <div className="divide-y divide-ink/8 border-t border-b border-ink/8">
+        {rows.map((row, i) => (
+          <div key={i} className="py-3">
+            <span className="relative inline-flex items-center">
+              <select
+                aria-label={`categoría ${i + 1}`}
+                value={row.category ?? 'otro'}
+                onChange={(e) => onCategory(i, e.target.value)}
+                className="appearance-none bg-transparent pr-5 text-sm font-bold text-coral focus:outline-none cursor-pointer"
+              >
+                {OBSESION_CATEGORIES.map((c) => (
+                  <option key={c.label} value={c.label}>
+                    {c.emoji} {c.label}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-0 text-coral text-[10px]">▾</span>
+            </span>
+            <input
+              className="input-ghost mt-1"
+              placeholder={OBSESION_PLACEHOLDERS[i] ?? ''}
+              value={row.item_text}
+              onChange={(e) => setRow(i, { item_text: e.target.value })}
+            />
+            <input
+              className="w-full bg-transparent border-0 border-b border-ink/10 rounded-none px-0 py-1.5 mt-1.5 text-sm text-ink/70 placeholder:text-ink/30 placeholder:font-normal focus:outline-none focus:border-coral transition"
+              placeholder={OBSESION_LINK_PLACEHOLDER}
+              value={row.link ?? ''}
+              inputMode="url"
+              onChange={(e) => setRow(i, { link: e.target.value })}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );

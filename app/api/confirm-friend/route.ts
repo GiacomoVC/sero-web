@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { supabaseConfigured } from '@/lib/supabase/admin';
+import { confirmFriend } from '@/lib/db/friends';
+import { logEvent } from '@/lib/logEvent';
 
 export const runtime = 'nodejs';
 
@@ -16,23 +19,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const url = process.env.APPS_SCRIPT_URL;
-  if (!url) {
-    console.log('[sero] (no APPS_SCRIPT_URL) would confirm friend:', body);
+  if (!supabaseConfigured()) {
+    console.log('[sero] (no Supabase env) would confirm friend:', body);
     return NextResponse.json({ ok: true });
   }
 
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        action: 'confirmFriend',
-        secret: process.env.WEBHOOK_SECRET || '',
-        ...body,
-      }),
+    await confirmFriend(body);
+    await logEvent('friend_confirmed', {
+      handle: body.fromSlug,
+      source_ref: body.toSlug,
+      common_count: body.commonCount ?? 0,
     });
-    if (!res.ok) throw new Error(`Apps Script error: ${res.status}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('[sero] confirm-friend failed:', e);

@@ -1,23 +1,11 @@
 import { NextResponse } from 'next/server';
 import { buildIndex, buildGraph, findPlans, findAllPlans, poolFor } from '@/lib/matching/engine';
 import { DEMO_DATA, DEMO_EGO } from '@/lib/matching/demo';
+import { loadExportData } from '@/lib/db/export';
 import type { EdgeMode, ExportData, FindPlansOptions } from '@/lib/matching/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-async function loadExport(secret: string): Promise<ExportData> {
-  const url = process.env.APPS_SCRIPT_URL;
-  if (!url) throw new Error('APPS_SCRIPT_URL not configured');
-  const u = new URL(url);
-  u.searchParams.set('action', 'export');
-  if (secret) u.searchParams.set('secret', secret);
-  const res = await fetch(u.toString(), { cache: 'no-store' });
-  if (!res.ok) throw new Error(`Apps Script export failed: ${res.status}`);
-  const data = (await res.json()) as ExportData & { error?: string };
-  if (data.error) throw new Error(`Apps Script: ${data.error}`);
-  return { responses: data.responses || [], friendships: data.friendships || [] };
-}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -32,7 +20,7 @@ export async function GET(req: Request) {
 
   let data: ExportData;
   try {
-    data = demo ? DEMO_DATA : await loadExport(secret);
+    data = demo ? DEMO_DATA : await loadExportData();
   } catch (e) {
     return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 502 });
   }
